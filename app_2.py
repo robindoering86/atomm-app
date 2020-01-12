@@ -22,8 +22,11 @@ from datetime import datetime
 #from flask_cachi1ng import Cache
 #import quandl as quandl 
 import atomm as am
-
-to = am.Tools()
+import atomm.Tools as to
+from atomm.Indicators import MomentumIndicators
+from atomm.DataManager.main import MSDataManager
+from atomm.Tools import MarketHours
+#to = am.Tools()
 #import time
 
 app = dash.Dash()
@@ -46,12 +49,12 @@ num_charts = 4
 
 server = app.server
 
-conf = am.Config()
+#conf = am.Config()
 
 
-dh = am.DataHandler('DAX')
-options = dh.IndexConstituentsDict()
-
+#dh = am.DataHandler('DAX')
+dh = MSDataManager()
+options = dh.IndexConstituentsDict('SPY')
 indicators = [
                     {'label': '10 day exponetial moving average', 'value': 'EMA10'},
                     {'label': '30 day exponetial moving average', 'value': 'EMA30'},
@@ -76,7 +79,7 @@ def create_chart_div(num):
                 children = [
                     html.Div([
                             html.Div(
-                                    children = [],   
+                                    children = [html.H1('Hello World')],   
                                     id = str(num) + 'info_div',
                                     className = 'menu_bar_left'),
                             html.Div(
@@ -89,11 +92,11 @@ def create_chart_div(num):
                               dcc.Dropdown(id = str(num) + 'stock_picker',
                                            options = options,
                                            multi = False,
-                                           value = 'ADS',
+                                           value = 'AAPL',
                                            placeholder = 'Enter stock symbol',
                                            className = 'dash-bootstrap'
                         )],
-                        style = {'display': 'none', 'verticalAlign': 'top'},
+                        style = {'display': 'inline-block', 'verticalAlign': 'top'},
                         id = str(num) + 'stock_picker_div',
                         className = 'stock_picker'    
                     ),
@@ -187,7 +190,7 @@ def create_sidebar_tabs():
     tabs = html.Div([
                 dcc.Tabs(
                         id = 'stockIndexTabs',
-                        value = 'tab-DAX',
+                        value = 'tab-SPY',
                         parent_className = 'custom-tabs',
                         className = 'custom-tabs-container',
                         children = [
@@ -232,7 +235,7 @@ def create_sidebar_tabs():
 #                                        
                                         html.Div([
                                         html.Div([
-                                                html.Button('Full Market', id = 'add_chart', n_clicks = 0)
+                                                html.Button('Full Market', id = 'full_market_backtest', n_clicks = 0)
                                                 ],
                                                 id='slider-output-container',
                                                 style = {'display': 'block', 'width': '20%'},
@@ -269,7 +272,15 @@ def create_strategyTestResult(num):
                     ddt.DataTable(
                             id = str(num) + 'strategyTestResults',
                             data = [],
-                            columns = [{'id': 'Symbol', 'name': 'Symbol', 'type': 'text'}, {'id': 'datebuy', 'name': 'Buy Date', 'type': 'datetime'}, {'id': 'pricebuy', 'name': 'Buy Price', 'type': 'numeric'}, {'id': 'buysignals', 'name': 'Buy Sig. (M,ROC,STOC,RSI)', 'type': 'text'}, {'id': 'datesell', 'name': 'Sell Date', 'type': 'datetime'}, {'id': 'pricesell', 'name': 'Sell Price', 'type': 'numeric'}, {'id': 'sellsignals', 'name': 'Sell Sig. (M,ROC,ST,RSI)', 'type': 'text'}, {'id': 'perprofit', 'name': '% Profit', 'type': 'numeric'}],
+                            columns = [
+                                {'id': 'Symbol', 'name': 'Symbol', 'type': 'text'}, 
+                                {'id': 'datebuy', 'name': 'Buy Date', 'type': 'datetime'},
+                                {'id': 'pricebuy', 'name': 'Buy Price', 'type': 'numeric'},
+                                {'id': 'buysignals', 'name': 'Buy Sig. (M,ROC,STOC,RSI)', 'type': 'text'}, 
+                                {'id': 'datesell', 'name': 'Sell Date', 'type': 'datetime'},
+                                {'id': 'pricesell', 'name': 'Sell Price', 'type': 'numeric'},
+                                {'id': 'sellsignals', 'name': 'Sell Sig. (M,ROC,ST,RSI)', 'type': 'text'},
+                                {'id': 'perprofit', 'name': '% Profit', 'type': 'numeric'}],
                             filter_action = 'native',
                             sort_action = 'native',
                             sort_mode = 'multi',
@@ -327,7 +338,7 @@ app.layout = html.Div([
         html.Div([
                 html.Div(
                         [
-                                html.H1('Atomm Trading App'),
+                                html.H1('atomm trading app'),
                         ],
                         className='content_header'
                         ),
@@ -347,11 +358,11 @@ app.layout = html.Div([
                                 create_strategyTestResult(0)
                         ]
                         ),
-                html.Div(
-                        [
-                                create_stockList(0)
-                        ]
-                        )
+                #html.Div(
+                #        [
+                #                create_stockList(0)
+                #        ]
+                #        )
                 ],
                 id='content'
                 ),
@@ -396,107 +407,34 @@ app.layout = html.Div([
 ####
 # Plot prices, daily returns etc.
 ####
-def d_close(df):
-    trace = go.Scatter(x = df.index, y = df['Close'], mode = 'lines', name = 'Daily Close', showlegend = False, line = {'width': 2})
-    return trace
-
-def ohlc(df):
-    trace = go.Candlestick(x = df.index,
-                           open = df['Open'],
-                           high = df['High'],
-                           low=df['Low'],
-                           close=df['Close'],
-                           showlegend = False)
-    return trace
-
-def average_close(df, index, ticker, fig):
-    dh = am.DataHandler(index)
-    data = dh.ReturnDataRT(ticker)
-    if not data.empty:
-        ftwh = data['52_week_high'].iloc[-1]
-        ftwl = data['52_week_low'].iloc[-1]
-        trace = go.Scatter(x = df.index, y = (np.zeros(len(df.index)) + ftwh), mode = 'lines', name = '52wh', showlegend = False, line = {'color': 'rgb(255, 255, 255)', 'width': 1, 'dash': 'dot'})
-        fig.append_trace(trace, 1, 1)
-        trace = go.Scatter(x = df.index, y = (np.zeros(len(df.index)) + df['Close'].mean()), mode = 'lines', name = 'Average', showlegend = False, line = {'color': 'rgb(255, 255, 255)', 'width': 1, 'dash': 'dot'})
-        fig.append_trace(trace, 1, 1)
-        trace = go.Scatter(x = df.index, y = (np.zeros(len(df.index)) + ftwl), mode = 'lines', name = '52wl', showlegend = False, line = {'color': 'rgb(255, 255, 255)', 'width': 1, 'dash': 'dot'})
-        fig.append_trace(trace, 1, 1)
-    return fig
-
-def bsMarkers(df, fig):
-#    df['Long'] = np.zeros(len(df))
-#    df['Short'] = np.zeros(len(df))
-#    
-#    signalCol = df.columns.get_loc('Signal')
-#    closeCol = df.columns.get_loc('Close')
-#    longCol = df.columns.get_loc('Long')
-#    shortCol = df.columns.get_loc('Short')
-#    for i in range(len(df)):
-#        sig1 = df['Signal'].iat[i]
-#        sig2 = df['Signal'].iat[i-1]
-#        val1 = df['Close'].iat[i]
-#        if sig1 == 1:
-#            df['Long'].iat[i] = val1
-#            df['Short'].iat[i] = 0
-#        elif sig1 == 0 and sig2 == 1:
-#            df['Long'].iat[i] = val1
-#            df['Short'].iat[i] = val1
-#        elif sig1 == 1 and sig2 == 0:
-#            df['Long'].iat[i] = 0
-#            df['Short'].iat[i] = val1    
-#        else:
-#            df['Long'].iat[i] = 0
-#            df['Short'].iat[i] = val1
-#    long = go.Scatter(x = df.index, y = df['Long'], connectgaps = False, name = 'long', mode='lines+markers',fill='tozeroy', line = {'color': cgreen, 'width': 2})
-#    short = go.Scatter(x = df.index, y = df['Short'], connectgaps = False, name = 'long', mode='lines+markers', fill='tozeroy', line = {'color': cred, 'width': 2})
-            
-            
-    long = go.Scatter(x = df.index, y = df['Close'].where(df['Signal'] == 1, None), showlegend = False, connectgaps = False, name = 'long', mode='lines', line = {'color': cgreen, 'width': 2})
-    fig.append_trace(long, 1, 1)
-    short = go.Scatter(x = df.index, y = df['Close'].where(df['Signal'] == 0, None), showlegend = False, connectgaps = False, name = 'long', mode='lines', line = {'color': cred, 'width': 2})
-    fig.append_trace(short, 1, 1)
-    buy = go.Scatter(x = df.loc[df['bsSig'] == 1 , 'Close'].index, y = df.loc[df['bsSig'] == 1, 'Close'].values, showlegend = False, name = 'buy', mode='markers', marker = {'size': 15, 'color': cgreen, 'opacity': 0.75, 'symbol': 'triangle-up'})
-    fig.append_trace(buy, 1, 1)
-    sell = go.Scatter(x = df.loc[df['bsSig'] == -1 , 'Close'].index, y = df.loc[df['bsSig'] == -1, 'Close'].values, showlegend = False, name = 'sell', mode='markers', marker = {'size': 15, 'color': cred, 'opacity': 0.75, 'symbol': 'triangle-down'})
-    fig.append_trace(sell, 1, 1)
-    return fig
-
-def vol_traded(df, fig, row):
-    trace = go.Scatter(x = df.index, y = df['Volume'], showlegend = False, line = {'color': 'rgb(20, 200, 190)', 'width': 1}, fillcolor = 'rgba(20, 200, 190, 0.5)', fill = 'tozeroy', name = 'Vol. Trad.')
-    fig.append_trace(trace, row, 1)
-    return fig
-
-def green_ref_line(df, y_pos, name):
-    return (go.Scatter(x = df.index, y = (np.zeros(len(df.index)) + y_pos), name = name, showlegend = False, line = {'color': cgreen, 'width': 1}, hoverinfo='skip'))
-
-def red_ref_line(df, y_pos, name):
-    return (go.Scatter(x = df.index, y = (np.zeros(len(df.index)) + y_pos), name = name, showlegend = False, line = {'color': cred, 'width': 1}, hoverinfo='skip'))
+stoc.zeros(len(df.index)) + y_pos), name = name, showlegend = False, line = {'color': cred, 'width': 1}, hoverinfo='skip'))
 ####
 # Momentum Strategies
 ####
 
 def MOM1(df, start_date, end_date, n_roc = 5, n_macd_short = 12, n_macd_long = 26, n_signal = 9, n_stoc = 7, n_rsi = 5):
-    roc = calcROC(df, n_roc)
+    mi = MomentumIndicators(df)
+    roc = mi.calcROC(n_roc)
  
-    macd = calcMACD(df, n_macd_short, n_macd_long)
+    macd = mi.calcMACD(n_macd_short, n_macd_long)
     df2 = df.copy()
     df2['Close'] = macd
-    signal = calcEMA(df2, n_signal)
+    signal = mi.calcEMA(n_signal, df2)
     df['SignalMACD'] = np.ones(len(df))
     df['SignalMACD'] = df['SignalMACD'].where(macd>signal).fillna(0)
     df['SignalROC'] = np.ones(len(df))
     df['SignalROC'] = df['SignalROC'].where(roc>0).fillna(0)
     ind_stoc = np.zeros(len(df))
-    stoc = calcSTOC(df, n_stoc)
+    stoc = mi.calcSTOC(n_stoc)
     for i in range(len(stoc)):
         if (stoc[i] > 70) or (70 > stoc[i] > 30 and ind_stoc[i-1] == 1):
             ind_stoc[i] = 1
-        else:
+        else:   
             ind_stoc[i] = 0
     df['SignalSTOC'] = ind_stoc
     
     ind_rsi = np.zeros(len(df))
-    rsi = calcRSI(df, n_rsi)
+    rsi = mi.calcRSI(n_rsi)
     for i in range(len(rsi)):
         if (rsi[i] > 70) or (70 > rsi[i] > 30 and ind_rsi[i-1] == 1):
             ind_rsi[i] = 1
@@ -527,80 +465,38 @@ def MOM1(df, start_date, end_date, n_roc = 5, n_macd_short = 12, n_macd_long = 2
 ####
 # Calculate Studies
 ####
-def calcSMA(df, n):
-    return df['Close'].rolling(window = n, min_periods = 1).mean()
 
-def calcEMA(df, n):
-#    weights = np.linspace(-1.0, 0., n)
-#    weights /= weights.sum()
-#    a = np.convolve(df['Close'], weights).fillna(0)
-#    a[:n] = a[n]
-    return df['Close'].ewm(span=n, adjust=False).mean()
-
-def calcSTD(df, n):
-    return df['Close'].rolling(window = 20, min_periods = 1).std()
-
-def calcRSI(df, n):
-    delta = df['Close'].diff()
-    delta = delta[1:]
-    up, down = delta.copy(), delta.copy()
-    up[up < 0] = 0
-    down[down > 0] = 0
-    roll_up1 = up.rolling(window = n).mean()
-    roll_down1 = down.rolling(window = n).mean()
-    # Calculate the RSI based on EWMA
-    RS1 = roll_up1 / roll_down1.abs()
-    return 100.0 - (100.0 / (1.0 + RS1))
-
-def calcROC(df, n):
-    N = df['Close'].diff(n)
-    D = df['Close'].shift(n)
-    return pd.Series(N / D, name='roc')  
-
-def calcMACD(df, n_short, n_long):
-    sma1 = calcEMA(df, n_short)  
-    sma2 = calcEMA(df, n_long)
-    return sma1-sma2
-
-def calcSTOC(df, n):
-    low = df['Close'].rolling(window = n).min()  
-    high = df['Close'].rolling(window = n).max()
-    latest = df['Close'].rolling(window = n).apply(lambda x: x[-1:])
-    return (latest-low)/(high-low)*100
-
-def calcATR(df, n):
-    TR=pd.Series(np.zeros(len(df),dtype=object))
-    for i in range(1,len(df)):
-        TR[i]=np.max([df['High'][i]-df['Low'][i], df['High'][i]-df['Close'][i-1], df['Close'][i-1]-df['Close'][i]])
-    return TR.rolling(window = n, min_periods = 1).mean()
 
 ####
 # Studies
 ####
 def EMA10(df, fig):
-    mi = am.MomentumIndicators(df)
-    
+    mi = MomentumIndicators(df)
     trace = (go.Scatter(x = df.index, y = mi.EMA(10), showlegend = False, name = 'EMA10'))
     fig.append_trace(trace, 1, 1)
     return fig    
 def EMA30(df, fig):
-    trace = (go.Scatter(x = df.index, y = calcEMA(df, 30), showlegend = False, name = 'EMA10'))
+    mi = MomentumIndicators(df)
+    trace = (go.Scatter(x = df.index, y = mi.calcEMA(30), showlegend = False, name = 'EMA10'))
     fig.append_trace(trace, 1, 1)
     return fig
 
 def SMA10(df, fig):
-    trace = (go.Scatter(x = df.index, y = calcSMA(df, 10), showlegend = False, name = 'SMA10'))
+    mi = MomentumIndicators(df)
+    trace = (go.Scatter(x = df.index, y = mi.calcSMA(10), showlegend = False, name = 'SMA10'))
     fig.append_trace(trace, 1, 1)
     return fig
 
 def SMA30(df, fig):
-    trace = (go.Scatter(x = df.index, showlegend = False, y = calcSMA(df, 30), name = 'SMA30'))
+    mi = MomentumIndicators(df)
+    trace = (go.Scatter(x = df.index, showlegend = False, y = mi.calcSMA(30), name = 'SMA30'))
     fig.append_trace(trace, 1, 1)
     return fig
 
 def BB202(df, fig):
-    sma20 = calcSMA(df, 20)
-    std = calcSTD(df, 20)
+    mi = MomentumIndicators(df)
+    sma20 = mi.calcSMA(20)
+    std = mi.calcSTD(20)
     trace = (go.Scatter(x = df.index, y = sma20, name = 'BB(20, 2)', showlegend = False))
     fig.append_trace(trace, 1, 1)
     trace = (go.Scatter(x = df.index, y = sma20-2*std, name = 'BB(20, 2)', showlegend = False))
@@ -624,10 +520,11 @@ def D_RETURNS(df, fig, row):
     return fig
 
 def RSI(df, fig, row):
+    mi = MomentumIndicators(df)
     lower = 30
     upper = 70
     n = 5
-    RSI1 = calcRSI(df, n)
+    RSI1 = mi.calcRSI(n)
     fig.append_trace(green_ref_line(df, upper, 'RSIREF80'), row, 1)
     fig.append_trace((go.Scatter(x = df.index, y = RSI1.where(RSI1 >= upper).fillna(upper), name = 'RSI', mode = 'lines', showlegend = False, line = {'width': 0}, fill='tonexty', fillcolor = 'rgba(12, 205, 24, 0.3)', hoverinfo='skip')), row, 1)
     fig.append_trace(red_ref_line(df, lower, 'RSIREF80'), row, 1) 
@@ -645,8 +542,9 @@ def RSI(df, fig, row):
     return fig
 
 def ROC(df, fig, row):
+    mi = MomentumIndicators(df)
     n = 5
-    ROC = calcROC(df, n)   
+    ROC = mi.calcROC(n)   
     fig.append_trace((go.Scatter(x = df.index, y = ROC.where(ROC >= 0).fillna(0), name = 'ROC(5)', mode = 'lines', connectgaps = True, showlegend = False, line = {'width': 0}, fill='tozeroy', fillcolor = 'rgba(12, 205, 24, 0.3)')), row, 1)
     fig.append_trace((go.Scatter(x = df.index, y = ROC.where(ROC < 0).fillna(0), name = 'ROC(5)', mode = 'lines', connectgaps = True, showlegend = False, line = {'width': 0}, fill='tozeroy', fillcolor = 'rgba(205, 12, 24, 0.3)')), row, 1)
     fig.append_trace((go.Scatter(x = df.index, y = ROC, name = 'ROC(5)', mode = 'lines', showlegend = False, line = {'color': 'rgb(250, 250, 250)', 'width': 1})), row, 1)
@@ -660,29 +558,31 @@ def ROC(df, fig, row):
 
 
 def MACD(df, fig, row):
-    n_short = 12
-    n_long = 26
-    macd = calcMACD(df, n_short, n_long)
+    mi = MomentumIndicators(df)
+    n_fast = 12
+    n_slow = 26
+    macd = mi.calcMACD(n_fast, n_slow)
     df2 = df.copy()
     df2['Close'] = macd
-    signal = calcEMA(df2, 9)
+    signal = mi.calcEMA(9, df2)
     fig.append_trace((go.Scatter(x = df.index, y = macd.where(macd >= 0).fillna(0), name = 'MACD(12,26)', mode = 'lines', connectgaps = True, showlegend = False, line = {'width': 0}, fill='tozeroy', fillcolor = 'rgba(12, 205, 24, 0.3)')), row, 1)
     fig.append_trace((go.Scatter(x = df.index, y = macd.where(macd < 0).fillna(0), name = 'MACD(12,26)', mode = 'lines', connectgaps = True, showlegend = False, line = {'width': 0}, fill='tozeroy', fillcolor = 'rgba(205, 12, 24, 0.3)')), row, 1)
     fig.append_trace((go.Scatter(x = df.index, y = macd, name = 'MACD(12,26)', mode = 'lines', showlegend = False, line = {'color': 'rgb(250, 250, 250)', 'width': 1})), row, 1)
     fig.append_trace((go.Scatter(x = df.index, y = signal, name = 'EMA(9)', mode = 'lines', showlegend = False, line = {'color': 'rgb(120, 120, 250)', 'width': 1})), row, 1)
     fig['layout']['yaxis' + str(row)].update(autorange = True,
        showgrid = True,
-       title  = 'MACD(' + str(n_short) + ', ' + str(n_long) + ')',
+       title  = 'MACD(' + str(n_fast) + ', ' + str(n_slow) + ')',
        gridcolor = 'rgba(255, 255, 255, 0.3)',
        color = 'rgba(255, 255, 255, 1)',
        )    
     return fig
 
 def STOC(df, fig, row):
+    mi = MomentumIndicators(df)
     lower = 30
     upper = 70
     n = 7
-    stoc = calcSTOC(df, n)
+    stoc = mi.calcSTOC(n)
     fig.append_trace(green_ref_line(df, upper, 'STOCREF' + str(upper)), row, 1)
     fig.append_trace((go.Scatter(x = df.index, y = stoc.where(stoc >= upper).fillna(upper), name = 'STOC(' + str(n)  + ')', mode = 'lines', showlegend = False, line = {'width': 0}, fill='tonexty', fillcolor = 'rgba(12, 205, 24, 0.3)')), row, 1)
     fig.append_trace(red_ref_line(df, lower, 'STOCREF' + str(lower)), row, 1) 
@@ -691,8 +591,9 @@ def STOC(df, fig, row):
     return fig
 
 def ATR(df, fig, row):
+    mi = MomentumIndicators(df)
     n = 5
-    atr = calcATR(df, n)
+    atr = mi.calcATR(n)
     fig.append_trace(go.Scatter(x = df.index, y = atr, name = 'ATR(' + str(n) + ')', mode = 'lines', showlegend = False, line = {'color': 'rgb(250, 250, 250)', 'width': 1}), row, 1)
     fig['layout']['yaxis' + str(row)].update(autorange = True,
        showgrid = True,
@@ -711,8 +612,9 @@ def ATR(df, fig, row):
 def get_fig(ticker, type_trace, studies, strategyTest, start_date, end_date, index):
 
 #    for ticker in ticker_list:
-    dh = am.DataHandler(index)
-    df = dh.ReturnData(ticker, start_date, end_date)
+    #dh = am.DataHandler(index)
+    dh = MSDataManager()
+    df = dh.ReturnData(ticker, start_date=start_date, end_date=end_date)
 
     subplot_traces = [  # first row traces
         'RSI',
@@ -854,87 +756,71 @@ def get_fig(ticker, type_trace, studies, strategyTest, start_date, end_date, ind
 
 def generate_info_div_callback(num):
     def info_div_callback(ticker, n_intervals, index, timeRange):
-        dh = am.DataHandler(index)
-        print(index)
-        mh = am.MarketHours(dh.ReturnMIC(index))
-        data = dh.ReturnDataRT(ticker)
-        children = ''
-        if not data.empty:
-            latest = data['price'].iloc[-1]
-            latest_trade_date = data.index[-1]
-            diff = float(data['day_change'].iloc[-1])
-            pct_change = float(data['change_pct'].iloc[-1])
-            ftwh = data['52_week_high'].iloc[-1]
-            ftwl = data['52_week_low'].iloc[-1]
-            market_cap = data['market_cap'].iloc[-1]
-            curr = str(data['currency'].iloc[-1]).replace('EUR', '€')
-            children = [html.Div([
-                            html.Table([
-                                    html.Tr([
-                                            html.Td(html.H2(ticker)),
-                                            html.Td(),
-                                            html.Td(),
-                                            html.Td('Market cap:'),
-                                            html.Td(curr + '{:0,.2f}'.format(market_cap))
-                                            ]),
-                                    html.Tr([
-                                            html.Td([html.Span(str(curr) + '%.2f'%latest + ' '), html.Span('' + '%+.2f'%diff + ' (' + '%+.2f'%pct_change + ' %)')], className = 'small'),
-                                            html.Td(),
-                                            html.Td(),
-                                            html.Td(html.Span('Market open', style={'color': 'green'}) if mh.MarketOpen() else html.Span('Market closed', style={'color': 'red'})),
-                                            html.Td()
-                                            ]),
-                                    html.Tr([
-                                            html.Td([html.Span(str(latest_trade_date))]),
-                                            html.Td(),
-                                            html.Td(),
-                                            html.Td(),
-                                            html.Td()
-                                            ]),        
-                                    ],
-                                    className = 'small'
-                                    ),
-                            ]),
-                        html.Div([
-                                dcc.RangeSlider(
-                                        disabled = True,
-                                        min=ftwl,
-                                        max=ftwh,
-                                        value=[ftwl, latest, ftwh],
-                                        marks={
-                                            ftwl: {'label': curr + str(ftwl), 'style': {'color': '#77b0b1'}},
-                                            latest: {'label': curr + str(latest), 'style': {'color': '#77b0b1'}},
-                                            ftwh: {'label': curr + str(ftwh), 'style': {'color': '#77b0b1'}}
-                                        }
-                                    )                                
-                                ], style={'display': 'block', 'width': '60%', 'padding': '8px 40px'})
-                        ]
+        #dh = am.DataHandler(index)
+        dh = MSDataManager()
+        #print(index)
+        mh = MarketHours(dh.ReturnMIC(index))
+        data = None
+        #data = dh.ReturnDataRT(ticker)
+        #children = ''
+        #if not data.empty
+        data = dh.ReturnData(ticker, limit=2)
+        #if data is not None:
+        latest = data['Close'].iloc[-1]
+        latest_trade_date = dh.ReturnLatestStoredDate(ticker).strftime('%Y:%M:%d - %H:%M:%S')
+        diff = data['Close'].diff()
+        pct_change = data['Close'].pct_change()[-1]
+        ftwh = data['Close'].values.max()
+        ftwl = data['Close'].values.min()
+        #market_cap = data['market_cap'].iloc[-1]
+        market_cap = 0
+        #curr = str(data['currency'].iloc[-1]).replace('EUR', '€')
+        curr = 'USD'
+        children = [html.Div([
+                        html.Table([
+                                html.Tr([
+                                        html.Td(html.H2(ticker)),
+                                        html.Td(),
+                                        html.Td(),
+                                        html.Td('Market cap:'),
+                                        html.Td(curr + '{:0,.2f}'.format(market_cap))
+                                        ]),
+                                html.Tr([
+                                        html.Td([html.Span(str(curr) + '%.2f'%latest + ' '), html.Span('' + '%+.2f'%diff + ' (' + '%+.2f'%pct_change + ' %)')], className = 'small'),
+                                        html.Td(),
+                                        html.Td(),
+                                        html.Td(html.Span('Market open', style={'color': 'green'}) if mh.MarketOpen() else html.Span('Market closed', style={'color': 'red'})),
+                                        html.Td()
+                                        ]),
+                                html.Tr([
+                                        html.Td([html.Span(str(latest_trade_date))]),
+                                        html.Td(),
+                                        html.Td(),
+                                        html.Td(),
+                                        html.Td()
+                                        ]),        
+                                ],
+                                className = 'small'
+                                ),
+                        ]),
+                    html.Div([
+                            dcc.RangeSlider(
+                                    disabled = True,
+                                    min=ftwl,
+                                    max=ftwh,
+                                    value=[ftwl, latest, ftwh],
+                                    marks={
+                                        ftwl: {'label': curr + str(ftwl), 'style': {'color': '#77b0b1'}},
+                                        latest: {'label': curr + str(latest), 'style': {'color': '#77b0b1'}},
+                                        ftwh: {'label': curr + str(ftwh), 'style': {'color': '#77b0b1'}}
+                                    }
+                                )                                
+                            ], style={'display': 'block', 'width': '60%', 'padding': '8px 40px'})
+                    ]
         return children
     return info_div_callback
 
 
-
-#def generate_show_hide_graph_div_callback(pair):
-#    def show_hide_graph_callback(charts_clicked):
-#        if pair not in charts_clicked:
-#            return 'hidden'
-#        
-#        if charts_clicked is not None:
-#            charts_clicked = charts_clicked.split(',')
-#            len_list = len(charts_clicked)
-#        else:
-#            charts_clicked = []
-#
-#        classes = ''
-#        classes = 'chart-div'
-#        if len_list == 1:
-#            classes = classes + ' one-column'
-#        elif len_list%2 == 0 and len_list<3:
-#                classes = classes + ' two-column'
-#        else:
-#                classes = classes + ' three-column'
-#        return classes
-#    return show_hide_graph_callback
 
 def generate_figure_callback(num):
     def chart_fig_callback(ticker_list, trace_type, studies, timeRange, strategyTest, oldFig, index):
@@ -950,112 +836,7 @@ def generate_figure_callback(num):
 # Creates a list of selected stocks in hidden Div
 ####
 app.config.suppress_callback_exceptions=True    
-#
-#def generate_chart_button_callback():
-#    def chart_button_callback(*args):
-#            pairs = ''
-##            print(args)
-#            for i in chart_list:
-#                if pairs:
-#                    pairs = pairs + ',' + str(i)
-#                else:                
-#                    pairs = str(i)
-#            print(pairs)
-#            return pairs
-#    return chart_button_callback
 
-#def generate_close_graph_callback(num):
-#    def close_graph_callback(n_clicks, chart_list):
-#            if n_clicks != 0:
-#                chart_list = chart_list.split(',')
-#                pairs = ''
-#                num = str(num)
-#                chart_list.remove(num)
-#                for chart in chart_list:
-#                    if pairs:
-#                        pairs = pairs + ',' + chart
-#                    else:                
-#                        pairs = chart
-#            return pairs
-#    return close_graph_callback
-
-
-#def generate_reset_close_button_nclicks_callback():
-#    def reset_close_button_nclicks_callback(charts_clicked, data, selected_rows):
-##        if n_clicks != 0:
-#        for chart in charts_clicked:
-#            
-#        lis = [0] * len(fse)
-#        return lis
-#    return reset_close_button_nclicks_callback
-#
-#def generate_hide_graph_div_callback():
-#    def hide_graph_div_callback(*args):
-#        selected_rows = args[-1]
-#        args = args[:-1]
-#        argsN = args[:len(fse)]
-#        args = args[:len(fse)]
-#        argsO = args[:-1]
-#        if selected_rows is not None:
-#            for i in range(len(argsN)):
-#                if argsN[i] != argsO[i]:
-#                    print(i)
-#                    selected_rows.remove(i) 
-#        else:
-#            selected_rows = []
-#        return selected_rows
-#    return hide_graph_div_callback
-
-#def generate_hide_graph_div_callback():
-#    def hide_graph_div_callback(*args)
-#app.callback(
-#                Output('div-out', 'children'),
-#        [
-#                Input('close_button' + str(num.replace('.', '')) + 'graph_div', 'n_clicks') for num in fse.index 
-#        ],       
-#        [
-#                State('DAX30Table', 'selected_rows')   
-#        ]
-#        )(generate_hide_graph_div_callback())
-#cache.memoize(timeout=100) 
-#
-#def generate_hide_graph_div_callback():
-#    def hide_graph_div_callback(selected_cells, selected_rows, selected_row_ids):
-##        selected_row_ids = args[-1]
-##        args = args[:-1]
-##        selected_rows = args[-1]
-##        args = args[:-1]
-##        selected_cells = args[-1]
-##        args = args[:-1]
-#        print(selected_cells)
-#        if selected_rows is None:
-#            selected_rows, selected_row_ids = [], []
-##            row = ''
-##            row_id = ''
-#        else:
-#            row = selected_cells[0]['row']
-#            row_id = selected_cells[0]['row_id']
-#            if row not in selected_rows:
-#                selected_rows.append(row)
-#            if row_id not in selected_row_ids:
-#                selected_row_ids.append(row_id)
-##        print(selected_rows)
-#        return selected_rows, selected_row_ids
-#    return hide_graph_div_callback
-#app.callback(
-#            [
-#                    Output('DAX30Table', 'selected_rows'),
-#                    Output('DAX30Table', 'selected_row_ids')
-#            ],
-#            [
-#                    Input('DAX30Table', 'selected_cells')
-#            ],
-#            [
-#                    State('DAX30Table', 'selected_rows'),
-#                    State('DAX30Table', 'selected_row_ids'),
-#            ]
-#        )(generate_hide_graph_div_callback())
-#cache.memoize(timeout=100) 
 
 def generate_load_ticker_callback():
     def load_ticker_callback(selected_cells, ticker_old):
@@ -1081,8 +862,8 @@ app.callback(
 
 
 def calcReturns(stockPicker, start_date, end_date, strategyToTest, index):
-    dh = am.DataHandler(index)
-    df1 = dh.ReturnData(stockPicker, start_date, end_date)
+    dh = MSDataManager()
+    df1 = dh.ReturnData(stockPicker, start_date=start_date, end_date=end_date)
     df, returnsStrat, returnsBH = globals()[strategyToTest](df1, start_date, end_date, 5)
     tickerSymbol = []
     buyPrices = []
@@ -1117,9 +898,10 @@ def calcReturns(stockPicker, start_date, end_date, strategyToTest, index):
 def calcStrategy(start_date, end_date, index):
     full_market_returns = []
     full_returns_bh = []
-    dh = am.DataHandler(index)
-    for ticker in dh.IndexConstituents():
-        df1 = dh.ReturnData(ticker, start_date, end_date,)
+    #dh = am.DataHandler(index)
+    dh = MSDataManager()
+    for ticker in dh.ReturnIndexConstituents(index):
+        df1 = dh.ReturnData(ticker, start_date=start_date, end_date=end_date,)
         df, returnsStrat, returnsBH = MOM1(df1, start_date, end_date, 5)
         full_market_returns.append(returnsStrat*100)
         full_returns_bh.append(returnsBH*100)
@@ -1139,7 +921,7 @@ def generate_calc_full_market_callback():
 app.callback(       
                     Output('full-market-backtest-results', 'children'),
             [
-                    Input('add_chart', 'n_clicks')
+                    Input('full_market_backtest', 'n_clicks')
             ],
             [
                     State('0chart', 'relayoutData'),
@@ -1160,7 +942,7 @@ app.callback(
 
 
 def generate_strategyTest_callback(num):
-    def strategyTest_callback(stockPicker, timeRange, strategyToTest, index):
+    def strategyTest_callback(strategyToTest, timeRange, stockPicker, index):
         """
 
         """
@@ -1194,27 +976,29 @@ def generate_strategyTest_callback(num):
 
 def generate_update_picker_dropdown():
     def update_picker_dropdown(index):
-        todaydate = datetime.now().date()
+        todaydate = datetime.now()
         index = index.split('-')[1]
-        options = am.DataHandler(index).IndexConstituentsDict()
-        dh = am.DataHandler(index)
+        #options = am.DataHandler().IndexConstituentsDict()
+        dh = MSDataManager()
+        #options = dh.IndexConstituentsDict(index)
+        options = {'AAPL': 'AAPL', 'MSFT': 'MSFT'}
+        #dh = am.DataHandler()
 
-        def Ret52wData(tick):
-            return dh.ReturnData(
-                    tick,
-                    (todaydate - relativedelta(weeks=52)),
-                    todaydate
-                    )
-        data = [{
-                'id': tick,
-                'Symbol': tick,
-                'Name': dh.GetName(tick),
-                '52ws': round(am.MomentumIndicators().calcSharpe(
-                            Ret52wData(tick)['Close'].values,
-                            252), 2),
-                '52wh': Ret52wData(tick)['Close'].max(),
-                '52wl': Ret52wData(tick)['Close'].min()
-                } for tick in dh.IndexConstituents()]
+        data = None
+        # def Ret52wData(tick):
+        #     return dh.ReturnData(
+        #             tick,
+        #             start_date=(todaydate - relativedelta(weeks=52)),
+        #             end_date=todaydate,
+        #             )
+        # data = [{
+        #         'id': tick,
+        #         'Symbol': tick,
+        #         'Name': tick,
+        #         '52ws': round(MomentumIndicators(Ret52wData(tick)).calcSharpe(252), 2),
+        #         '52wh': Ret52wData(tick)['Close'].max(),
+        #         '52wl': Ret52wData(tick)['Close'].min()
+        #         } for tick in dh.ReturnIndexConstituents(index)]
         return index, options, data
     return update_picker_dropdown
 
@@ -1268,11 +1052,11 @@ for num in range(0,1):
                         Output(str(num) + 'strategyTestResults', 'data')
                 ],
                 [
-                        Input(str(num) + 'stock_picker', 'value'),
-                        Input(str(num) + 'chart', 'relayoutData'),
                         Input(str(num) + 'strategyTest', 'value')
                 ],
                 [
+                        State(str(num) + 'chart', 'relayoutData'),
+                        State(str(num) + 'stock_picker', 'value'),
                         State('selected-index-div', 'value')
                 ],
                 )(generate_strategyTest_callback(num))
