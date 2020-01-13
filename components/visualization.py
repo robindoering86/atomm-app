@@ -15,7 +15,12 @@ from atomm.DataManager.main import MSDataManager
 import colorlover as cl
 colorscale = cl.scales['12']['qual']['Paired']
 cgreen = 'rgb(12, 205, 24)'
+# cgreen = 'rgb(16, 30, 30)'
+# cgreen = 'rgb(45, 76, 80)'
+
 cred = 'rgb(205, 12, 24)'
+# cred = 'rgb(255, 114, 33)'
+
 
 ####
 # Plot prices, daily returns etc.
@@ -37,7 +42,10 @@ def ohlc(df):
                            high = df['High'],
                            low=df['Low'],
                            close=df['Close'],
-                           showlegend = False)
+                           showlegend = False,
+                           increasing_line_color= cgreen,
+                           decreasing_line_color= cred
+                           )
     return trace
 
 def average_close(df, index, ticker, fig):
@@ -197,22 +205,85 @@ def SMA30(df, fig):
 
 def BB202(df, fig):
     mi = MomentumIndicators(df)
-    sma20 = mi.calcSMA(20)
-    std = mi.calcSTD(20)
-    trace = (go.Scatter(x = df.index, y = sma20, name = 'BB(20, 2)', showlegend = False))
+    # sma20 = mi.calcSMA(20)
+    # std = mi.calcSTD(20)
+    upper, lower, sma20 = mi.calcBB(20, 2)
+    trace = (go.Scatter(
+        x = df.index,
+        y = sma20,
+        name = 'BB(20, 2)',
+        line = {
+            #'color': 'rgb(250, 250, 250)',                
+            'width': 1
+            },
+        showlegend = False)
+        )
     fig.append_trace(trace, 1, 1)
-    trace = (go.Scatter(x = df.index, y = sma20-2*std, name = 'BB(20, 2)', showlegend = False))
+    trace = (go.Scatter(
+        x = df.index,
+        y = lower,
+        name = 'BB(20, 2)',
+        line = {
+            'color': 'rgb(219, 240, 238)',                
+            'width': 1
+            },
+        showlegend = False
+        ))
     fig.append_trace(trace, 1, 1)
-    trace = (go.Scatter(x = df.index, y = sma20+2*std, name = 'BB(20, 2)', showlegend = False))
+    trace = (go.Scatter(
+        x = df.index,
+        y = upper,
+        name = 'BB(20, 2)',
+        showlegend = False,
+        line = {
+            'color': 'rgb(219, 240, 238)',                
+            'width': 1
+            },
+        fill='tonexty',
+        fillcolor = 'rgba(219, 240, 238 0.5)'
+        ))
     fig.append_trace(trace, 1, 1)
     return fig
 
 def D_RETURNS(df, fig, row):
     d_return = df['Close'].pct_change()
-    fig.append_trace((go.Scatter(x = df.index, y = d_return.where(d_return >= 0).fillna(0), name = 'Daily return', mode = 'lines', connectgaps = True, showlegend = False, line = {'width': 0}, fill='tozeroy', fillcolor = 'rgba(12, 205, 24, 0.3)')), row, 1)
-    fig.append_trace((go.Scatter(x = df.index, y = d_return.where(d_return < 0).fillna(0), name = 'Daily return', mode = 'lines', connectgaps = True, showlegend = False, line = {'width': 0}, fill='tozeroy', fillcolor = 'rgba(205, 12, 24, 0.3)')), row, 1)
-    fig.append_trace((go.Scatter(x = df.index, y = d_return, name = 'Daily return', mode = 'lines', line = {'color': 'rgb(250, 250, 250)', 'width': 1}, showlegend = False,)), row, 1)
-    fig.append_trace((go.Scatter(x = df.index, y = (np.zeros(len(df.index)) + d_return.mean()), name = 'Avg. daily return', showlegend = False, mode = 'lines', line = {'color': 'rgb(250, 250, 250)', 'width': 1})), row, 1)
+    fig.append_trace((go.Scatter(
+        x = df.index,                                
+        y = d_return.where(d_return >= 0).fillna(0),
+        name = 'Daily return', mode = 'lines',
+        connectgaps = True,
+        showlegend = False,
+        line = {'width': 0}, 
+        fill='tozeroy',
+        fillcolor = 'rgba(12, 205, 24, 0.3)')
+        ), row, 1)
+    fig.append_trace((go.Scatter(
+        x = df.index,
+        y = d_return.where(d_return < 0).fillna(0),
+        name = 'Daily return',
+        mode = 'lines',
+        connectgaps = True,
+        showlegend = False,
+        line = {'width': 0},
+        fill='tozeroy',
+        fillcolor = 'rgba(205, 12, 24, 0.3)')
+        ), row, 1)
+    fig.append_trace((go.Scatter(
+        x = df.index,
+        y = d_return,
+        name = 'Daily return',
+        mode = 'lines', 
+        line = {'color': 'rgb(250, 250, 250)', 'width': 1},
+        showlegend = False,)
+        ), row, 1)
+    fig.append_trace((go.Scatter(
+        x = df.index,
+        y = (np.zeros(len(df.index)) + d_return.mean()),
+        name = 'Avg. daily return', 
+        showlegend = False,
+        mode = 'lines', 
+        line = {'color': 'rgb(250, 250, 250)', 'width': 1})
+        ), row, 1)
     fig['layout']['yaxis' + str(row)].update(autorange = True,
        showgrid = True,
        title  = 'Daily returns',
@@ -307,6 +378,63 @@ def ATR(df, fig, row):
        zeroline = True
        )    
     return fig
+
+def ADX(df, fig, row):
+    mi = MomentumIndicators(df)
+    n = 10
+    adx = mi.calcADX(n)
+    fig.append_trace(go.Scatter(
+        x = df.index, 
+        y = adx, 
+        name = (f'ADX({n})'), 
+        mode = 'lines', 
+        showlegend = False, 
+        line = {
+            'color': 'rgb(250, 250, 250)',
+            'width': 1})
+        , row, 1)
+    fig['layout']['yaxis' + str(row)].update(autorange = True,
+       showgrid = True,
+       title  = (f'ADX({n})'),
+       gridcolor = 'rgba(255, 255, 255, 1)',
+       color = 'rgba(255, 255, 255, 1)',
+       tickmode = 'array',
+       tickvals = [30, 70],
+       zeroline = True
+       )    
+    return fig
+
+def WR(df, fig, row):
+    mi = MomentumIndicators(df)
+    n = 10
+    wr = mi.calcWR(n)(n)
+    fig.append_trace(go.Scatter(
+        x = df.index, 
+        y = wr, 
+        name = (f'WR({n})'), 
+        mode = 'lines', 
+        showlegend = False, 
+        line = {
+            'color': 'rgb(250, 250, 250)',
+            'width': 1})
+        , row, 1)
+    fig['layout']['yaxis' + str(row)].update(autorange = True,
+       showgrid = True,
+       title  = (f'WR({n})'),
+       gridcolor = 'rgba(255, 255, 255, 1)',
+       color = 'rgba(255, 255, 255, 1)',
+       tickmode = 'array',
+       tickvals = [30, 70],
+       zeroline = True
+       )    
+    return fig
+
+    
+    
+
+# [,'williamsr', 'cci', , 'log_ret', 'adx' ,
+#             'stocd', ' 'autocorr_1',\
+#            'autocorr_3','autocorr_5']
 
 #####
 #

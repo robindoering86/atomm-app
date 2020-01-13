@@ -72,7 +72,17 @@ p {
     width: 100%;
     display: inline-block;
     background-color: rgb(64, 68, 72);
+
 }
+.navbar-brand {
+    background:  url(./logo2.png) no-repeat center left;
+    /*background: radial-gradient(circle, black, white) url(http://www.atomm.de:8080/wp-content/uploads/2020/01/logo.png);*/
+    background-size:  auto 55px;
+    height: 70px;
+    padding-left: 3em;
+    color: rgb(16,30,30, 0.0) !important;
+}
+
 .content_header
 {
     text-align: center;

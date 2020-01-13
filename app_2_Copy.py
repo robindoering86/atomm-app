@@ -43,8 +43,8 @@ theme = 'seaborn'
 import colorlover as cl
 colorscale = cl.scales['12']['qual']['Paired']
 
-cgreen = 'rgb(12, 205, 24)'
-cred = 'rgb(205, 12, 24)'
+# cgreen = 'rgb(12, 205, 24)'
+# cred = 'rgb(205, 12, 24)'
 
 
 # Set number of allowed charts
@@ -70,7 +70,9 @@ indicators = [
                 {'label': 'MACD(12, 26)', 'value': 'MACD'},
                 {'label': 'STOC(7)', 'value': 'STOC'},
                 {'label': 'ATR(7)', 'value': 'ATR'},
-                {'label': 'Daily returns', 'value': 'D_RETURNS'}
+                {'label': 'Daily returns', 'value': 'D_RETURNS'},
+                {'label': 'Average Directional Indicator', 'value': 'ADX'},
+                {'label': 'Williams R (15)', 'value': 'WR'},
               ]
 
 strategies = [{'label': 'Momentum follower 1', 'value': 'MOM1'}]
@@ -147,7 +149,7 @@ def create_chart_div(num):
 
             ])
         ],
-        className=['mt-3', 'text-left']
+        className=['mt-3', 'mb-3', 'text-left']
     )
     return body
 
@@ -221,7 +223,10 @@ def create_chart_div(num):
 #                                             'data': [],
 #                                             'layout': [{'height': 900}]
 #                                             },
-#                                     config = {'displayModeBar': False, 'scrollZoom': True, 'fillFrame': False},
+#                                     config = {
+#                                               'displayModeBar': False, 
+#                                               'scrollZoom': True,
+#                                               'fillFrame': False},
 #                             ),
 #                             id = str(num) + 'graph',
 #                             )
@@ -234,6 +239,7 @@ def create_chart_div(num):
 def create_navbar():
     navbar = dbc.NavbarSimple(
         children=[
+            html.Div(id='logo', className=['logo']),
             dbc.NavItem(dbc.NavLink("Page 1", href="#")),
             dbc.DropdownMenu(
                 children=[
@@ -246,7 +252,7 @@ def create_navbar():
                 label="More",
             ),
         ],
-        brand="atomm web app",
+        brand="web app",
         brand_href="#",
         color="dark",
         dark=True,
@@ -334,7 +340,9 @@ def get_fig(ticker, type_trace, studies, strategyTest, start_date, end_date, ind
         'MACD',
         'STOC',
         'D_RETURNS',
-        'ATR'
+        'ATR',
+        'ADX',
+        'WR'
     ]
     selected_subplots_studies = []
     selected_first_row_studies = []
@@ -367,14 +375,16 @@ def get_fig(ticker, type_trace, studies, strategyTest, start_date, end_date, ind
                              mirror = 'ticks',
                              color = 'rgba(255, 255, 255, 1)',
                              tickcolor = 'rgba(255,255,255,1)')
-    fig['layout']['yaxis1'].update(range = [df['Close'].min()/1.3, df['Close'].max()*1.05],
-                             showgrid = True,
-                             anchor = 'x1', 
-                             mirror = 'ticks',
-                             layer = 'above traces',
-                             color = 'rgba(255, 255, 255, 1)',
-                             gridcolor = 'rgba(255, 255, 255, 1)'
-                             )
+    fig['layout']['yaxis1'].update(range = [
+        df['Close'].min()/1.3,
+        df['Close'].max()*1.05],
+        showgrid = True,
+        anchor = 'x1', 
+        mirror = 'ticks',
+        layer = 'above traces',
+        color = 'rgba(255, 255, 255, 1)',
+        gridcolor = 'rgba(255, 255, 255, 1)'
+        )
     fig['layout']['yaxis2'].update(
 #                          range= [0, df['Volume'].max()*4], 
 #                          overlaying = 'y2', 
@@ -420,12 +430,29 @@ def get_fig(ticker, type_trace, studies, strategyTest, start_date, end_date, ind
         autosize = True,
         uirevision = 'The User is always right',
         height = 600,
-        paper_bgcolor = '#000000',
-        plot_bgcolor = '#000000',
+        # paper_bgcolor = '#000000',
+        paper_bgcolor = '#222',
+
+        # paper_bgcolor = 'rgb(64, 68, 72)',
+        # paper_bgcolor = 'rgb(219, 240, 238)',
+
+        # plot_bgcolor = '#000000',
+        plot_bgcolor = '#222',
+
+        # plot_bgcolor = 'rgb(64, 68, 72)',
+        # plot_bgcolor = 'rgb(219, 240, 238)',
+
         hovermode = 'x',
         spikedistance = -1,
-        xaxis = {'gridcolor': 'rgba(255, 255, 255, 0.3)', 'gridwidth': .5, 'showspikes': True, 'spikemode': 'across', 'spikesnap': 'data', 'spikecolor': 'rgb(220, 200, 220)', 'spikethickness': 1, 'spikedash': 'dot'},
-        yaxis = {'gridcolor': 'rgba(255, 255, 255, 0.3)', 'gridwidth': .5}, 
+        xaxis = {
+            'gridcolor': 'rgba(255, 255, 255, 0.5)',              
+            'gridwidth': .5, 'showspikes': True,
+            'spikemode': 'across',
+            'spikesnap': 'data',
+            'spikecolor': 'rgb(220, 200, 220)',
+            'spikethickness': 1, 'spikedash': 'dot'
+            },
+        yaxis = {'gridcolor': 'rgba(255, 255, 255, 0.5)', 'gridwidth': .5}, 
         legend = dict(x = 1.05, y = 1)
     )
     
@@ -572,7 +599,12 @@ app.callback(
 def calcReturns(stockPicker, start_date, end_date, strategyToTest, index):
     dh = MSDataManager()
     df1 = dh.ReturnData(stockPicker, start_date=start_date, end_date=end_date)
-    df, returnsStrat, returnsBH = globals()[strategyToTest](df1, start_date, end_date, 5)
+    df, returnsStrat, returnsBH = globals()[strategyToTest](
+        df1,
+        start_date,
+        end_date, 
+        5
+        )
     tickerSymbol = []
     buyPrices = []
     buyDates = []
@@ -599,8 +631,12 @@ def calcReturns(stockPicker, start_date, end_date, strategyToTest, index):
             profit = (priceSell-priceBuy)/priceBuy
             sellSignals.append(signal)
             returns.append(round(profit*100, 2))
-    data = np.array([tickerSymbol, buyDates, buyPrices, buySignals, sellDates, sellPrices, sellSignals, returns]).T.tolist()
-    dff = pd.DataFrame(data = data, columns = ['Symbol', 'datebuy', 'pricebuy', 'buysignals', 'datesell', 'pricesell', 'sellsignals', 'perprofit'])
+    data = np.array([tickerSymbol, buyDates, buyPrices, buySignals, sellDates,
+                     sellPrices, sellSignals, returns]).T.tolist()
+    dff = pd.DataFrame(data = data, columns = ['Symbol', 'datebuy', 'pricebuy', 
+                                               'buysignals', 'datesell', 
+                                               'pricesell', 'sellsignals', 
+                                               'perprofit'])
     return dff, returnsStrat, returnsBH
 
 def calcStrategy(start_date, end_date, index):
@@ -613,7 +649,8 @@ def calcStrategy(start_date, end_date, index):
         df, returnsStrat, returnsBH = MOM1(df1, start_date, end_date, 5)
         full_market_returns.append(returnsStrat*100)
         full_returns_bh.append(returnsBH*100)
-    return [np.average(np.array(full_market_returns)), np.average(np.array(full_returns_bh))]
+    return [np.average(np.array(full_market_returns)),
+            np.average(np.array(full_returns_bh))]
 
 def generate_calc_full_market_callback():
     def calc_full_market_callback(n_clicks, timeRange, index):
@@ -623,7 +660,10 @@ def generate_calc_full_market_callback():
         if n_clicks != 0:
             calcStratRes= calcStrategy(start_date, end_date, index)
 #            initial_vals = ([5, 12, 26, 9, 7, 5])
-            children = html.Div([html.H3('%Profit Total Your Strategy: '), html.Div([str(round(calcStratRes[0], 2))]), html.H3('%Profit Total B&H: '), html.Div([str(round(calcStratRes[1], 2))])])
+            children = html.Div([html.H3('%Profit Total Your Strategy: '),
+                                 html.Div([str(round(calcStratRes[0], 2))]),
+                                 html.H3('%Profit Total B&H: '),
+                                 html.Div([str(round(calcStratRes[1], 2))])])
         return children
     return calc_full_market_callback
 app.callback(       
@@ -711,12 +751,15 @@ def generate_update_picker_dropdown():
     return update_picker_dropdown
 
 def generate_figure_callback():
-    def chart_fig_callback(ticker_list, trace_type, studies, timeRange, strategyTest, oldFig, index):
+    def chart_fig_callback(ticker_list, trace_type, studies, timeRange, 
+                           strategyTest, oldFig, index):
         start_date, end_date = to.axisRangeToDate(timeRange)
         # print(ticker_list, trace_type, studies, timeRange, strategyTest, oldFig, index)
         if oldFig is None or oldFig == {"layout": {}, "data": {}}:
-            return get_fig(ticker_list, trace_type, studies, strategyTest, start_date, end_date, index)
-        fig = get_fig(ticker_list, trace_type, studies, strategyTest, start_date, end_date, index)
+            return get_fig(ticker_list, trace_type, studies, strategyTest, 
+                           start_date, end_date, index)
+        fig = get_fig(ticker_list, trace_type, studies, strategyTest, 
+                      start_date, end_date, index)
         return fig
     return chart_fig_callback
 
