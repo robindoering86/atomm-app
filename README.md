@@ -1,8 +1,7 @@
 # atomm web app
 
-[! https://img.shields.io/github/license/robin.doering@gmail.com/atomm-app] [! https://img.shields.io/badge/Made%20at-Starschema-red]
-A short description of the project.
-
+This demo is a visualization tool for my capstone project ["Enrich yourself"] (https://github.com/robindoering86/capstone_nf) for neue fische Data Science Bootcamp.
+It is a Dash web application used to visualize historical stock data from New York Stock Exchange and 20 technical chart indicators. In addition, it previously trained ML algorithms can be backtested on any stock in the database.   
 
 ## Running locally
 
