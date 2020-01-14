@@ -35,6 +35,8 @@ from atomm.Tools import MarketHours
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 theme = 'seaborn'
 
+app.title = 'atomm web app'
+
 #cache = Cache(app.server, config={
 #    'CACHE_TYPE': 'filesystem',
 #    'CACHE_DIR': 'cache-directory'
@@ -132,7 +134,9 @@ def create_chart_div(num):
                     className = 'dash-bootstrap'
                     ),                    
                 ],
-                md=4),
+                md=4,
+                style='display-none',
+                ),
 
             dbc.Col([
                 #html.H2('Select stock symbol'),               
@@ -140,7 +144,7 @@ def create_chart_div(num):
                         id = '0chart',
                         figure = {
                                 'data': [],
-                                'layout': [{'height': 900}]
+                                'layout': [{'height': 750}]
                                 },
                         config = {'displayModeBar': False, 'scrollZoom': True, 'fillFrame': False},
                 )            
@@ -149,7 +153,7 @@ def create_chart_div(num):
 
             ])
         ],
-        className=['mt-3', 'mb-3', 'text-left']
+        className=['mt-3', 'mb-5', 'text-left']
     )
     return body
 
@@ -240,7 +244,7 @@ def create_navbar():
     navbar = dbc.NavbarSimple(
         children=[
             html.Div(id='logo', className=['logo']),
-            dbc.NavItem(dbc.NavLink("Page 1", href="#")),
+            dbc.NavItem(dbc.NavLink('Backtesting', href="#")),
             dbc.DropdownMenu(
                 children=[
                     dbc.DropdownMenuItem("More pages", header=True),
@@ -252,7 +256,7 @@ def create_navbar():
                 label="More",
             ),
         ],
-        brand="web app",
+        brand="atomm web app",
         brand_href="#",
         color="dark",
         dark=True,
@@ -363,7 +367,7 @@ def get_fig(ticker, type_trace, studies, strategyTest, start_date, end_date, ind
         print_grid = True,
         vertical_spacing = 0.05,
         row_width = [0.2]*(row-1)+[1-(row-1)*0.2]
-    )        
+    )
     
     fig.append_trace(globals()[type_trace](df), 1, 1)
     fig = average_close(df, index, ticker, fig)
@@ -375,9 +379,11 @@ def get_fig(ticker, type_trace, studies, strategyTest, start_date, end_date, ind
                              mirror = 'ticks',
                              color = 'rgba(255, 255, 255, 1)',
                              tickcolor = 'rgba(255,255,255,1)')
-    fig['layout']['yaxis1'].update(range = [
-        df['Close'].min()/1.3,
-        df['Close'].max()*1.05],
+    fig['layout']['yaxis1'].update(
+        range = [
+            df['Close'].min()/1.3,
+            df['Close'].max()*1.05
+        ],
         showgrid = True,
         anchor = 'x1', 
         mirror = 'ticks',

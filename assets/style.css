@@ -75,12 +75,17 @@ p {
 
 }
 .navbar-brand {
-    background:  url(./logo2.png) no-repeat center left;
+    background:  url(./logo.png) no-repeat center left;
     /*background: radial-gradient(circle, black, white) url(http://www.atomm.de:8080/wp-content/uploads/2020/01/logo.png);*/
     background-size:  auto 55px;
     height: 70px;
     padding-left: 3em;
-    color: rgb(16,30,30, 0.0) !important;
+    /*color: rgb(16,30,30, 0.0) !important;*/
+    padding-left: 3em;
+    padding-top: 1.1em;
+	font-family: 'Rajdhani', sans-serif !important;
+	font-weight: 600;
+	
 }
 
 .content_header
