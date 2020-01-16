@@ -150,7 +150,7 @@ def MOM1(df, start_date, end_date, n_roc = 5, n_macd_short = 12, n_macd_long = 2
             ind_rsi[i] = 1
         else:
             ind_rsi[i] = 0
-    df['SignalRSI'] = ind_rsi
+    df['SignalRSI'] = ind_def
     
     df['Signal'] = np.ones(len(df))
     sig = df['SignalMACD'] + df['SignalROC'] + df['SignalSTOC'] + df['SignalRSI']
@@ -182,7 +182,7 @@ def MOM1(df, start_date, end_date, n_roc = 5, n_macd_short = 12, n_macd_long = 2
 ####
 def EMA10(df, fig):
     mi = MomentumIndicators(df)
-    trace = (go.Scatter(x = df.index, y = mi.EMA(10), showlegend = False, name = 'EMA10'))
+    trace = (go.Scatter(x = df.index, y = mi.calcEMA(10), showlegend = False, name = 'EMA10'))
     fig.append_trace(trace, 1, 1)
     return fig    
 def EMA30(df, fig):
@@ -298,12 +298,38 @@ def RSI(df, fig, row):
     upper = 70
     n = 5
     RSI1 = mi.calcRSI(n)
-    fig.append_trace(green_ref_line(df, upper, 'RSIREF80'), row, 1)
+    fig.append_trace(green_ref_line(df, upper, 'RSIREF70'), row, 1)
     fig.append_trace((go.Scatter(
-        x = df.index, y = RSI1.where(RSI1 >= upper).fillna(upper), name = 'RSI', mode = 'lines', showlegend = False, line = {'width': 0}, fill='tonexty', fillcolor = 'rgba(12, 205, 24, 0.3)', hoverinfo='skip')), row, 1)
-    fig.append_trace(red_ref_line(df, lower, 'RSIREF80'), row, 1) 
-    fig.append_trace((go.Scatter(x = df.index, y = RSI1.where(RSI1 < lower).fillna(lower), name = 'RSI', mode = 'lines', showlegend = False, line = {'width': 0}, fill='tonexty', fillcolor = 'rgba(205, 12, 24, 0.3)', hoverinfo='skip')), row, 1)
-    fig.append_trace((go.Scatter(x = df.index, y = RSI1, name = 'RSI', mode = 'lines', showlegend = False, line = {'color': 'rgb(250, 250, 250)', 'width': 1})), row, 1)
+        x = df.index,
+        y = RSI1.where(RSI1 >= upper).fillna(upper),
+        name = 'RSI',
+        mode = 'lines',
+        showlegend = False, 
+        line = {'width': 0}, 
+        fill = 'tonexty', 
+        fillcolor = 'rgba(12, 205, 24, 0.3)',
+        hoverinfo='skip')
+        ), row, 1)
+    fig.append_trace(red_ref_line(df, lower, 'RSIREF30'), row, 1) 
+    fig.append_trace((go.Scatter(
+        x = df.index,
+        y = RSI1.where(RSI1 < lower).fillna(lower), 
+        name = 'RSI', 
+        mode = 'lines', 
+        showlegend = False,
+        line = {'width': 0}, 
+        fill = 'tonexty', 
+        fillcolor = 'rgba(205, 12, 24, 0.3)', 
+        hoverinfo='skip')
+        ), row, 1)
+    fig.append_trace((go.Scatter(
+        x = df.index, 
+        y = RSI1, 
+        name = 'RSI', 
+        mode = 'lines', 
+        showlegend = False, 
+        line = {'color': 'rgb(250, 250, 250)', 'width': 1})
+        ), row, 1)
     fig['layout']['yaxis' + str(row)].update(autorange = True,
        showgrid = True,
        title  = 'RSI(' + str(n) + ') (%)',
@@ -477,8 +503,32 @@ def ADX(df, fig, row):
     mi = MomentumIndicators(df)
     n = 10
     upper = 25
-    lower = 24
+    lower = 25
     adx = mi.calcADX(n)
+    
+    fig.append_trace(green_ref_line(df, upper, 'ADXREF75'), row, 1)    
+    fig.append_trace((go.Scatter(
+        x = df.index,
+        y = adx.where(adx >= upper).fillna(upper),
+        name = f'ADX({n})',
+        mode = 'lines', 
+        showlegend = False, 
+        line = {'width': 0}, 
+        fill = 'tonexty', 
+        fillcolor = 'rgba(12, 205, 24, 0.3)')
+        ), row, 1)
+
+    fig.append_trace(red_ref_line(df, lower, 'ADXREF25'), row, 1) 
+    fig.append_trace((go.Scatter(
+        x = df.index,
+        y = adx.where(adx < lower).fillna(lower),
+        name = f'ADX({n}',
+        mode = 'lines',
+        showlegend = False,
+        line = {'width': 0},
+        fill = 'tonexty',
+        fillcolor = 'rgba(205, 12, 24, 0.3)')
+        ), row, 1)
     fig.append_trace(go.Scatter(
         x = df.index, 
         y = adx, 
@@ -489,27 +539,7 @@ def ADX(df, fig, row):
             'color': 'rgb(250, 250, 250)',
             'width': 1})
         , row, 1)
-    fig.append_trace((go.Scatter(
-        x = df.index,
-        y = adx.where(adx >= upper).fillna(adx),
-        name = f'ADX({n})',
-        mode = 'lines', 
-        showlegend = False, 
-        line = {'width': 0}, 
-        fill='tonexty', 
-        fillcolor = 'rgba(12, 205, 24, 0.3)')
-        ), row, 1)
-    fig.append_trace(red_ref_line(df, lower, 'STOCREF' + str(lower)), row, 1) 
-    fig.append_trace((go.Scatter(
-        x = df.index,
-        y = adx.where(adx < lower).fillna(adx),
-        name = f'ADX({n}',
-        mode = 'lines',
-        showlegend = False,
-        line = {'width': 0},
-        fill='tonexty',
-        fillcolor = 'rgba(205, 12, 24, 25)')
-        ), row, 1)
+
     fig['layout']['yaxis' + str(row)].update(autorange = True,
        showgrid = True,
        title  = (f'ADX({n})'),

@@ -7,6 +7,7 @@ Created on Tue Jul  2 09:29:34 2019
 '''
 from components import *
 
+from joblib import dump, load
 
 import dash
 #import dash_auth
@@ -23,7 +24,6 @@ import numpy as np
 from dateutil.relativedelta import relativedelta
 from datetime import datetime
 #from flask_cachi1ng import Cache
-#import quandl as quandl 
 import atomm as am
 import atomm.Tools as to
 from atomm.Indicators import MomentumIndicators
@@ -76,14 +76,15 @@ indicators = [
                 {'label': 'Average Directional Indicator', 'value': 'ADX'},
                 {'label': 'Williams R (15)', 'value': 'WR'},
               ]
+# indicators = [{'label': 'RandomForest1', 'value': 'RF1'}]
 
-strategies = [{'label': 'Momentum follower 1', 'value': 'MOM1'}]
+strategies = [{'label': 'RandomForest1', 'value': 'RF1'}]
 
 def create_chart_div(num):
 
     body = dbc.Container([
         dbc.Row(
-            dbc.Col(html.Div(html.H1('Hello World'), id='0info_div'), md=12)            
+            dbc.Col(html.Div(html.H1(''), id='0info_div'), md=12)            
             ), 
         dbc.Row([
             dbc.Col([
@@ -120,24 +121,42 @@ def create_chart_div(num):
                                 {'label': 'Candlestick', 'value': 'ohlc'}
                             ],
                             value='ohlc',
+                            className='inline-block',
                         ),                    
                 ],
                 md=4),
+        ]),    
+            
+        dbc.Row([
+            dbc.Col([
+                html.H6('Select ML model'),                               
+                # dcc.Dropdown(
+                #     id = 'load_model',
+                #     options = strategies,
+                #     multi = False,
+                #     value = '',
+                #     placeholder = 'Select Model',
+                #     className = 'dash-bootstrap'
+                #     ),                    
+                ],
+                md=8,
+                className='',
+                style='',
+                ),
             dbc.Col([
                 #html.H2('Select stock symbol'),                               
-                dcc.Dropdown(
-                    id = str(num) + 'strategyTest',
-                    options = strategies,
-                    multi = False,
-                    value = '',
-                    placeholder = 'Test strategies',
-                    className = 'dash-bootstrap'
-                    ),                    
+                    dbc.Button("Run Backtest",
+                               color="primary", 
+                               className="mr-1", 
+                               id='run_backtest'
+                               ),                 
                 ],
                 md=4,
-                style='display-none',
+                style='',
                 ),
-
+        ]),    
+            
+        dbc.Row([
             dbc.Col([
                 #html.H2('Select stock symbol'),               
                 dcc.Graph(
@@ -158,88 +177,9 @@ def create_chart_div(num):
     return body
 
 
-
-        
- 
-
-
-
-
-# def create_chart_div(num):
-#     divs = (    dbc.Row(
-#                 id = str(num) + 'graph_div',
-#                 className = 'visible chart-div one-column',
-#                 children = [
-#                     html.Div([
-#                             html.Div(
-#                                     children = [html.H1('Hello World')],   
-#                                     id = str(num) + 'info_div',
-#                                     className = 'menu_bar_left'),
-              
-#                         ],
-#                         className = 'menu_bar'
-#                         ),
-                    
-                    
-   
-                    
-                    
-#                     html.Div([html.H3('Studies', style = {'display': 'none'}),
-#                             dcc.Dropdown(id = str(num) + 'study_picker',
-#                                       options = indicators,
-#                                       multi = True,
-#                                       value = [],
-#                                       placeholder = 'Select studies',
-#                                       className = 'dash-bootstrap'
-#                         )], 
-#                         style = {'display': 'inline-block', 'verticalAlign': 'top'},
-#                         id = str(num) + 'study_picker_div',
-#                         className = 'study_picker'
-#                     ),
-#                     html.Div([html.H3('Strategy', style = {'display': 'none'}),
-#                             dcc.Dropdown(id = str(num) + 'strategyTest',
-#                                       options = strategies,
-#                                       multi = False,
-#                                       value = '',
-#                                       placeholder = 'Test strategies',
-#                                       className = 'dash-bootstrap'
-#                         )], 
-#                         style = {'display': 'inline-block', 'verticalAlign': 'top'},
-#                         id = str(num) + 'strategie_picker_div',
-#                         className = 'strategie_picker'
-#                     ),
-#                     html.Div(
-#                         dcc.RadioItems(
-#                             id = str(num) + 'trace_style',
-#                             options=[
-#                                 {'label': 'Line Chart', 'value': 'd_close'},
-#                                 {'label': 'Candlestick', 'value': 'ohlc'}
-#                             ],
-#                             value='ohlc',
-#                         ),
-#                         id=str(num) + 'style_tab',
-#                         style = {'marginTop': '0', 'textAlign': 'left', 'display': 'inline-block'}
-#                     ),
-#                     html.Div(
-#                             dcc.Graph(
-#                                     id = str(num) + 'chart',
-#                                     figure = {
-#                                             'data': [],
-#                                             'layout': [{'height': 900}]
-#                                             },
-#                                     config = {
-#                                               'displayModeBar': False, 
-#                                               'scrollZoom': True,
-#                                               'fillFrame': False},
-#                             ),
-#                             id = str(num) + 'graph',
-#                             )
-#                             ]
-#                        )
-#             )
-#     return divs
-
-
+#
+# Creates the layout of the top navigation bar.
+# 
 def create_navbar():
     navbar = dbc.NavbarSimple(
         children=[
@@ -273,12 +213,6 @@ def create_navbar():
 ########
 app.layout = html.Div([
         html.Div([
-                # html.Div(
-                #         [
-                #                 html.H1('atomm trading app'),
-                #         ],
-                #         className='content_header'
-                #         ),
                 html.Div(
                         [
                                 create_navbar(),
@@ -372,7 +306,7 @@ def get_fig(ticker, type_trace, studies, strategyTest, start_date, end_date, ind
     fig.append_trace(globals()[type_trace](df), 1, 1)
     fig = average_close(df, index, ticker, fig)
     
-    fig['layout']['xaxis1'].update(tickangle= -0, 
+    fig['layout'][f'xaxis{row}'].update(tickangle= -0, 
                              tickformat = '%Y-%m-%d',
                              autorange = True,
                              showgrid = True,
@@ -682,17 +616,7 @@ app.callback(
                     State('selected-index-div', 'value')
             ]
             )(generate_calc_full_market_callback())
-#cache.memoize(timeout=100) 
 
-#app.callback(
-#            [
-#                    Output('close_button' + str(num.replace('.', '')) + 'graph_div', 'n_clicks') for num in fse.index 
-#            ],
-#            [
-#                    Input('charts_clicked', 'children')
-#            ]
-#            )(generate_reset_close_button_nclicks_callback())
-#cache.memoize(timeout=100)
 
 
 def generate_strategyTest_callback(num):
@@ -785,26 +709,32 @@ app.callback(
     ]
     )(generate_figure_callback())
 
+# def generate_load_model_callback():
+#     def load_model_callback(n_clicks, model, symbol):
+#         if n_clicks is not None:
+#             model = load(str(model))
+#     return load_model_callback
+
+# app.callback(
+#             [
+#                     # Output('hist-graph', 'figure'),
+#                     # Output(str(num) + 'strategyTestResults', 'data')
+#             ],
+#             [
+#                     Input('run_backtest', 'n_clicks')
+
+#             ],
+#             [
+#                     State('load_model', 'value'),
+#                     # State('timeRangeBT', 'value')
+#                     State('0stockpicker', 'value')
+#             ],
+#             )(generate_load_model_callback())
+
+
+
 
 for num in range(0,1):
-#    num = num.re5place('.', '')
-#    app.callback(
-#                        Output(str(num) + 'graph_div', 'className'),
-#                [
-#                        Input('charts_clicked', 'children')
-#                ],       
-#                )(generate_show_hide_graph_div_callback(num))
-#    cache.memoize(timeout=100)           
-    
-    
-
-
-    
-#    rn [{'label': i, 'value': i} for i in fnameDict[name]]    
-
-   
-#    cache.memoize(timeout=100)
-
     app.callback(
                 [
                         Output('selected-index-div', 'value'),
