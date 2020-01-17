@@ -271,7 +271,11 @@ def create_chart_div(num):
                         'data': [],
                         'layout': chart_layout
                         },
-                    config = {'displayModeBar': False, 'scrollZoom': True, 'fillFrame': False},
+                    config = {
+                        'displayModeBar': False,
+                        'scrollZoom': False,
+                        'fillFrame': False
+                        },
                     )            
                 ],
                 md=12,
