@@ -28,6 +28,11 @@ import atomm.Tools as to
 from atomm.Indicators import MomentumIndicators
 from atomm.DataManager.main import MSDataManager
 from atomm.Tools import MarketHours
+from atomm.Tools import calcIndicators
+from atomm.Tools import calc_returns as calcReturns
+
+# joblib to import trained models
+from joblib import load, dump
 #to = am.Tools()
 #import time
 
@@ -76,6 +81,16 @@ indicators = [
                 {'label': 'Average Directional Indicator', 'value': 'ADX', 'subplot': True},
                 {'label': 'Williams R (15)', 'value': 'WR', 'subplot': True},
               ]
+
+models = [
+    {'label': 'RandomForest_1', 'value': 'RF_1'},
+    {'label': 'XGBoost_1', 'value': 'XGB_1'}  
+    
+    ]
+
+model_dict = {
+    'RF_1': 'RF_best.joblib'
+    }
 
 strategies = [{'label': 'Momentum follower 1', 'value': 'MOM1'}]
 
@@ -161,12 +176,11 @@ search_bar = dbc.Row(
         dbc.Col(
             dcc.Input(
                 id='0stock_picker',
+                type='text',
                 list='list-suggested-inputs',
                 placeholder='Search for stock',
-                value='',
-                type='text',
-                size='50',
-                className='bg-dark border-light text-light w-100 rounded br-3 pl-2 pr-2 pt-1 pb-1'
+                value='MMM - 3M Company',
+                className='bg-dark border-light text-light w-100 rounded-sm br-3 pl-2 pr-2 pt-1 pb-1'
                 ),
             className='border-light'
             ),
@@ -180,47 +194,64 @@ search_bar = dbc.Row(
     align="center",
 )
 
-
 def create_submenu():
     body = dbc.Container([
         dbc.Row(
             [
-            dbc.Col(
-                children=[],
-                md=4,
-                className='pl-4 pr-4 pt-2 pb-2',
-                id='infodiv'
-                ),
             dbc.Col([
-                html.H6('Select Technical Indicator'),
-                   
-                dcc.Dropdown(id = '0study_picker',
-                              options = indicators,
-                              multi = True,
-                              value = [],
-                              placeholder = 'Select studies',
+                html.H6('Load Pretrained Model'),
+                dcc.Dropdown(id = 'model_selector',
+                              options = models,
+                              multi = False,
+                              value = 'RF_1',
+                              placeholder = 'Select ML Model',
                               className = 'dash-bootstrap'
                               ),
-                    
+                html.H6('Model Params'),
+                dbc.Textarea(
+                    id = 'model_params',
+                    value = [],
+                    placeholder = '',
+                    bs_size = 'sm',
+                     style = { 
+                         'background-color': '#222',
+                         'border': 0, 
+                         'color': 'rgb(255, 255, 255)'
+                         },
+                    # className='bg-dark'
+                    ),
+                ],
+                md=4,
+                className='pl-4 pr-4 pt-2 pb-2',
+                id='abc'
+                ),
+            dbc.Col([
+                html.H6('Testing Period'),
+                dcc.DatePickerRange(
+                    calendar_orientation = 'vertical',
+                    display_format = 'DD.MM.YYYY',
+                    persistence = True,
+                    id='testing_range',
+                    max_date_allowed=datetime.today(),
+                    className='dash-bootstrap',
+                    style={'background-color': '#000'}
+                    ),
+                dbc.Button( 
+                        'Run',
+                        n_clicks=0,
+                        id='run_backtest',
+                        className='btn-primary',
+                        )
+ 
                 ],
                 md=4,
                 className='border-left pl-4 pr-4 pt-2 pb-2',
                 ),
-            
-            dbc.Col([
-                html.H6('Chart Style'),
-                dbc.RadioItems(
-                            id = '0trace_style',
-                            options=[
-                                {'label': 'Line Chart', 'value': 'd_close'},
-                                {'label': 'Candlestick', 'value': 'ohlc'}
-                            ],
-                            value='ohlc',
-                            className='inline-block',
-                        ),                    
-                ],
-                md=4,
-                className='border-left pl-4 pr-4 pt-2 pb-2',
+            dbc.Col(
+                children = [],
+                md = 4 ,
+                className = 'border-left pl-4 pr-4 pt-2 pb-2',
+                id = 'resultsbox'
                 ),
             ],
             className='',
@@ -235,7 +266,7 @@ def create_chart_div(num):
         dbc.Row([
             dbc.Col([
                 dcc.Graph(
-                    id = '0chart',
+                    id = 'returns',
                     figure = {
                         'data': [],
                         'layout': chart_layout
@@ -281,6 +312,7 @@ def create_navbar():
 
         ],
         color="dark",
+        sticky = 'top',
         dark=True,
         className='navbar-dark ml-auto mr-auto shadow'
     )
@@ -297,10 +329,10 @@ app.layout = html.Div([
     create_submenu(),
     create_chart_div(0),
     dcc.Interval(
-        id='interval-component',
-        interval=30*10000,
-        n_intervals=0
-        ),
+                    id='interval-component',
+                    interval=30*10000,
+                    n_intervals=0
+                    ),
     # html.Div([
     #     # html.Div(
     #     #     [
@@ -323,14 +355,16 @@ app.layout = html.Div([
     #         id='content'
     #         ),
     html.Div(
-        id='symbol_selected',
-        style={'display': 'inline-block'}
+        id='charts_clicked',
+        style={'display': 'none'}
         ),
     html.Div(
-        id='selected-index-div',
-        style={'display': 'inline-block'}
+        children=[],
+        id='model_div',
+        style={'display': 'none'}
         ),
     html.Div(
+        children=[],
         id='div-out',
         style={'display': 'inline-block'}
         ),
@@ -343,24 +377,13 @@ app.layout = html.Div([
 
 
 
-def get_fig(ticker, type_trace, studies, start_date, end_date, index):
+def return_tearsheet(df, names, start_date, end_date):
 
-#    for ticker in ticker_list:
-    #dh = am.DataHandler(index)
-    dh = MSDataManager()
-    df = dh.ReturnData(ticker, start_date=start_date, end_date=end_date)
+    # dh = MSDataManager()
+    # df = dh.ReturnData(ticker, start_date=start_date, end_date=end_date)
    
-    selected_subplots_studies = []
-    selected_first_row_studies = []
-    row = 2  # number of subplots
-
-    if studies != []:
-        for study in studies:
-            if study in subplot_traces:
-                row += 1  # increment number of rows only if the study needs a subplot
-                selected_subplots_studies.append(study)
-            else:
-                selected_first_row_studies.append(study)      
+    row = 1  # number of subplots
+   
     fig = tools.make_subplots(
         rows = row,
         shared_xaxes = True,
@@ -370,9 +393,30 @@ def get_fig(ticker, type_trace, studies, start_date, end_date, index):
         vertical_spacing = 0.05,
         row_width = [0.2]*(row-1)+[1-(row-1)*0.2]
     )
+    type_trace = 'cum_returns'
+    for name in names: 
+        fig.append_trace(globals()[type_trace](df, name, name, True), 1, 1)
+    df['predictions'] = df['predictions'].diff().shift(-1)
+    fig.append_trace(
+        go.Scatter(
+        x = df[df['predictions'] == 1].index,
+        y = df[df['predictions'] == 1]['Cum_Returns_Strat'],
+        mode = 'markers',
+        name = 'Buys',
+        showlegend = False,
+        marker = {'symbol': 'triangle-up', 'size': 15, 'color': 'green'},
+        ), 1, 1)
     
-    fig.append_trace(globals()[type_trace](df), 1, 1)
-    
+    fig.append_trace(
+        go.Scatter(
+        x = df[df['predictions'] == -1].index,
+        y = df[df['predictions'] == -1]['Cum_Returns_Strat'],
+        mode = 'markers',
+        name = 'Sells',
+        showlegend = False,
+        marker = {'symbol': 'triangle-down', 'size': 15, 'color': 'red'},
+        ), 1, 1)
+        
     fig['layout'][f'xaxis{row}'].update(
         tickangle= -0, 
         tickformat = '%Y-%m-%d',
@@ -383,58 +427,26 @@ def get_fig(ticker, type_trace, studies, start_date, end_date, index):
         tickcolor = 'rgba(255,255,255,1)'
         )
     fig['layout']['yaxis1'].update(
-        range = [
-            df['Close'].min()/1.3,
-            df['Close'].max()*1.05
-        ],
+        autorange = True,
         showgrid = True,
+        tickformat = '%',
         anchor = 'x1', 
         mirror = 'ticks',
         layer = 'above traces',
         color = 'rgba(255, 255, 255, 1)',
         gridcolor = 'rgba(255, 255, 255, 1)'
         )
-    fig['layout']['yaxis2'].update(
-        # range= [0, df['Volume'].max()*4], 
-        # overlaying = 'y2', 
-        # layer = 'below traces',
-        autorange = True,
-        # anchor = 'x1', 
-        side = 'left', 
-        showgrid = True,
-        title = 'D. Trad. Vol.',
-        color = 'rgba(255, 255, 255, 1)',
-        )
-   
-    # if model != '' and model is not None:
-    #     # bsSig, retStrat, retBH = globals()[strategyTest](df, start_date, end_date, 5)
-    #     ml = load(model)
-    #     fig = bsMarkers(df, fig)
-    #     fig['layout'].update(annotations=[
-    #             dict(
-    #                 x = df.index[int(round(len(df.index)/2, 0))],
-    #                 y = df['Close'].max()*1.02,
-    #                 text = 'Your Strategy: ' + str(round(retStrat*100, 0)) + ' % \nBuy&Hold: ' + str(round(retBH*100, 0)) + '%',
-    #                 align = 'center',
-    #                 font = dict(
-    #                         size = 16,
-    #                         color = 'rgb(255, 255, 255)'),
-                            
-    #                 showarrow = False,
-                    
-    #             )
-    #             ]
+    # fig['layout']['yaxis2'].update(
+    #     # range= [0, df['Volume'].max()*4], 
+    #     # overlaying = 'y2', 
+    #     # layer = 'below traces',
+    #     autorange = True,
+    #     # anchor = 'x1', 
+    #     side = 'left', 
+    #     showgrid = True,
+    #     title = 'D. Trad. Vol.',
+    #     color = 'rgba(255, 255, 255, 1)',
     #     )
-
-    for study in selected_first_row_studies:
-        fig = globals()[study](df, fig)  # add trace(s) on fig's first row
-    
-    row = 2
-    fig = vol_traded(df, fig, row)
-    for study in selected_subplots_studies:
-        row += 1
-        fig = globals()[study](df, fig, row)  # plot trace on new row
-
 
     fig['layout'].update(chart_layout)
     fig['layout']['xaxis'].update(
@@ -469,92 +481,8 @@ def get_fig(ticker, type_trace, studies, start_date, end_date, index):
             ),
             type="date"
     )
-    
+
     return fig
-
-
-
-def generate_info_div_callback():
-    def info_div_callback(ticker, n_intervals):
-        ticker_sym = ticker.split('-')[0].strip()
-        ticker_sec = ticker.split('-')[1].strip()
-        dh = MSDataManager()
-        mh = MarketHours('NYSE')
-        mo_class = 'cgreen' if mh.MarketOpen else 'cred'
-        mo_str = 'open' if mh.MarketOpen else 'closed'
-        latest_trade_date = dh.ReturnLatestStoredDate(ticker_sym)
-        latest_trade_date_str = latest_trade_date.strftime('%d-%m-%Y - %H:%M:%S')
-        data = dh.ReturnData(
-            ticker_sym,
-            start_date=latest_trade_date-relativedelta(years=1),
-            end_date = latest_trade_date,
-            limit=None
-            )
-        latest = data['Close'].iloc[-1]
-        diff = (data['Close'][-2]-data['Close'][-1])
-        pct_change = diff/data['Close'][-2]
-        pl_class = 'cgreen' if diff > 0 else 'cred'
-        pl_sign = '+' if diff > 0 else '-'
-        # pct_change = f''
-        ftwh = data['Close'].values.max()
-        ftwl = data['Close'].values.min()
-        #market_cap = data['market_cap'].iloc[-1]
-        # market_cap = 0
-        #curr = str(data['currency'].iloc[-1]).replace('EUR', '€')
-        curr = 'USD'
-        children = [
-            dbc.Row(
-                [
-        
-                        html.H6(f'{ticker_sec} ({ticker_sym})', className='')
-                        
-                ]
-                ),
-            dbc.Row(
-                [
-                    dbc.Col([
-                        html.P(
-                        [
-                            html.Span(html.Strong(f'{curr} {latest:.2f} ', className=pl_class+' large bold')),
-                            html.Span(f'{pl_sign}{diff:.2f} ', className=pl_class+' small'),
-                            html.Span(f'({pl_sign}{pct_change:.2f}%)', className=pl_class+' small'),
-                            ],
-                        ),
-                        html.P(
-                            html.Span(f'As of {latest_trade_date_str}. Market {mo_str}.', className=' small')
-                            )
-                        ],
-                        md=12,
-                        ),
-                    ]),
-                ]
-            # dbc.Row(
-            #     html.Div([
-            #         dcc.RangeSlider(
-            #                 disabled = True,
-            #                 min=ftwl,
-            #                 max=ftwh,
-            #                 value=[ftwl, latest, ftwh],
-            #                 # value=[1, 20, 40]
-            #                 marks={
-            #                     float(ftwl): {'label': f'{curr} {ftwl:.2f}', 'style': {'color': '#77b0b1'}},
-            #                     float(latest): {'label': f'{curr} {latest:.2f}', 'style': {'color': '#77b0b1'}},
-            #                     float(ftwh): {'label': f'{curr} {ftwh:.2f}', 'style': {'color': '#77b0b1'}}
-            #                 }
-            #             )                                
-            #         ],
-            #         style={'display': 'block', 'width': '60%', 'padding': ''},
-            #         className='mt-1'
-            #         )
-            #         )
-        
-        
-        # {latest_trade_date}
-            # latest}+({pct_change:.2f})')
-        return children
-    return info_div_callback
-
-
 
 
 
@@ -574,48 +502,49 @@ def generate_load_ticker_callback():
     return load_ticker_callback
 
 
-def calcReturns(stockPicker, start_date, end_date, strategyToTest, index):
-    dh = MSDataManager()
-    df1 = dh.ReturnData(stockPicker, start_date=start_date, end_date=end_date)
-    df, returnsStrat, returnsBH = globals()[strategyToTest](
-        df1,
-        start_date,
-        end_date, 
-        5
-        )
-    tickerSymbol = []
-    buyPrices = []
-    buyDates = []
-    buySignals = []
-    sellPrices = []
-    sellDates = []
-    sellSignals = []
-    returns = []
-    for i in range(len(df)):
-        sig1 =df['bsSig'].iat[i]
-        val1 = df['Close'].iat[i]
-        date1 = df.index[i]
-        signal = str(int(df['SignalMACD'][i])) + str(int(df['SignalROC'][i])) + str(int(df['SignalSTOC'][i])) + str(int(df['SignalRSI'][i]))
-        if sig1 == 1:
-            tickerSymbol.append(stockPicker)
-            priceBuy = val1
-            buyPrices.append(val1)
-            buyDates.append(date1)
-            buySignals.append(signal)
-        elif sig1 == -1:
-            priceSell = val1
-            sellPrices.append(val1)
-            sellDates.append(date1)
-            profit = (priceSell-priceBuy)/priceBuy
-            sellSignals.append(signal)
-            returns.append(round(profit*100, 2))
-    data = np.array([tickerSymbol, buyDates, buyPrices, buySignals, sellDates,
-                     sellPrices, sellSignals, returns]).T.tolist()
-    dff = pd.DataFrame(data = data, columns = ['Symbol', 'datebuy', 'pricebuy', 
-                                               'buysignals', 'datesell', 
-                                               'pricesell', 'sellsignals', 
-                                               'perprofit'])
-    return dff, returnsStrat, returnsBH
+# def calcReturns(stockPicker, start_date, end_date, strategyToTest, index):
+#     dh = MSDataManager()
+#     df1 = dh.ReturnData(stockPicker, start_date=start_date, end_date=end_date)
+#     df, returnsStrat, returnsBH = globals()[strategyToTest](
+#         df1,
+#         start_date,
+#         end_date, 
+#         5
+#         )
+#     tickerSymbol = []
+#     buyPrices = []
+#     buyDates = []
+#     buySignals = []
+#     sellPrices = []
+#     sellDates = []
+#     sellSignals = []
+#     returns = []
+#     for i in range(len(df)):
+#         sig1 =df['bsSig'].iat[i]
+#         val1 = df['Close'].iat[i]
+#         date1 = df.index[i]
+#         signal = str(int(df['SignalMACD'][i])) + 
+# str(int(df['SignalROC'][i])) + str(int(df['SignalSTOC'][i])) + str(int(df['SignalRSI'][i]))
+#         if sig1 == 1:
+#             tickerSymbol.append(stockPicker)
+#             priceBuy = val1
+#             buyPrices.append(val1)
+#             buyDates.append(date1)
+#             buySignals.append(signal)
+#         elif sig1 == -1:
+#             priceSell = val1
+#             sellPrices.append(val1)
+#             sellDates.append(date1)
+#             profit = (priceSell-priceBuy)/priceBuy
+#             sellSignals.append(signal)
+#             returns.append(round(profit*100, 2))
+#     data = np.array([tickerSymbol, buyDates, buyPrices, buySignals, sellDates,
+#                      sellPrices, sellSignals, returns]).T.tolist()
+#     dff = pd.DataFrame(data = data, columns = ['Symbol', 'datebuy', 'pricebuy', 
+#                                                'buysignals', 'datesell', 
+#                                                'pricesell', 'sellsignals', 
+#                                                'perprofit'])
+#     return dff, returnsStrat, returnsBH
 
 def calcStrategy(start_date, end_date, index):
     full_market_returns = []
@@ -722,7 +651,6 @@ def generate_figure_callback():
     def chart_fig_callback(ticker_list, trace_type, studies, timeRange, 
                            oldFig, index):
         start_date, end_date = to.axisRangeToDate(timeRange)
-        print(ticker_list)
         ticker_list = ticker_list.split('-')[0].strip()
         if oldFig is None or oldFig == {'layout': {}, 'data': {}}:
             return get_fig(ticker_list, trace_type, studies,  
@@ -732,79 +660,163 @@ def generate_figure_callback():
         return fig
     return chart_fig_callback
 
-app.callback(
-                    
-        Output('0chart', 'figure'),
-    [
-        Input('symbol_selected', 'value'),
-        Input('0trace_style', 'value'),
-        Input('0study_picker', 'value'),
-        Input('0chart', 'relayoutData'),
-    ],
-    [
-        State('0chart', 'figure'),
-        State('selected-index-div', 'value')
-    ]
-    )(generate_figure_callback())
 
-app.callback(
-        Output('infodiv', 'children'),
-    [
-        Input('symbol_selected', 'value'),
-        Input('interval-component', 'n_intervals')
-    ]
-    )(generate_info_div_callback())
+#
+# Callbacks for Interactivity
+#
 
-@app.callback(
-        Output('symbol_selected', 'value'),
-    [
-        Input('0stock_picker', 'value'),
-    ]
-    )
-def select_symbol(symbol):
-    print(symbol)
-    return str(symbol)
-
-# def generate_clear_search():
-#     def clear_search(symbol):
-#         return ''
-#     return clear_search
 # app.callback(
+                    
+#         Output('0chart', 'figure'),
 #     [
-#         Output('0stock_picker', 'value'),
+#         Input('0stock_picker', 'value'),
+#         Input('0trace_style', 'value'),
+#         Input('0study_picker', 'value'),
+#         Input('0chart', 'relayoutData'),
 #     ],
 #     [
-#         Input('symbol_selected', 'value'),
+#         State('0chart', 'figure'),
+#         State('selected-index-div', 'value')
 #     ]
-#     )(generate_clear_search())
+#     )(generate_figure_callback())
 
+@app.callback(
+    [
+        Output('model_div', 'children'),
+        Output('model_params', 'value'),
+    ],
+    [
+        Input('model_selector', 'value'),
+    ]
+    )
+def load_model_callback(model):
 
-for num in range(0,1):
-    app.callback(
+    if model is not None:
+        model_file = model_dict.get(model)
+        model_file = f'./data/{model_file}'
+        model = load(model_file)
+        return model_file, str(model)
+    return '', 'No model selected'
+
+@app.callback(
+    [   
+          Output('returns', 'figure'),
+          Output('resultsbox', 'children'),
+       ],
+    [
+          Input('run_backtest', 'n_clicks')
+      ],
+    [
+          State('model_div', 'children'),
+          State('0stock_picker', 'value'),
+          State('testing_range', 'start_date'),
+          State('testing_range', 'end_date'),
+      ]
+    )
+def run_model(
+        n_clicks,
+        model, 
+        symbol = 'AAPL',
+        start_date = datetime.today()-relativedelta(years=1),
+        end_date = datetime.today()
+        ):
+    if n_clicks > 0 and n_clicks is not None:
+        start_date = datetime.strptime(start_date.split(' ')[0], '%Y-%m-%d')
+        end_date = datetime.strptime(end_date.split(' ')[0], '%Y-%m-%d')
+        symbol = symbol.split('-')[0].strip()
+        print(symbol)
+        df = dh.ReturnData(symbol, start_date=start_date, end_date=end_date)
+        prices = df.copy()
+        lookback_windows = [3, 5, 7, 10, 15, 20, 25, 30]
+        ti_list = ['stoc', 'atr', 'williamsr', 'cci', 'rsi', 'adx', 'macd',\
+           'roc', 'ema', 'bb', 'stocd']
+        df = pd.concat([df], keys=[symbol], axis=1)
+        X_test = calcIndicators(df, symbol, lookback_windows, ti_list)[max(lookback_windows):]
+        
+        model = load(model)
+        y_pred = model.predict(X_test)
+        results = calcReturns(y_pred, 1, prices[max(lookback_windows):])
+        results['predictions'] = y_pred
+        
+        fig = return_tearsheet(
+            results,
+            ['Cum_Returns_Strat', 'Cum_Returns_Baseline'],
+            start_date, 
+            end_date
+            )
+        ret_strat = results['Cum_Returns_Strat'][-1]*100
+        ret_baseline = results['Cum_Returns_Baseline'][-1]*100
+        c_1 = cgreen if ret_strat > ret_baseline else cred
+        c_2 = cgreen if ret_strat < ret_baseline else cred
+
+        textbox = [
+            html.H5('Results'),
+            dbc.Row(
                 [
-                        Output('selected-index-div', 'value'),
-                        Output(str(num) + 'stock_picker', 'options'),
-                        Output('IndexListTable', 'data')
-                ],
-                [
-                        Input('stockIndexTabs', 'value')
+                    dbc.Col(
+                        [
+                            html.Span(
+                                f'{ret_strat:.2f} %',
+                                style={
+                                    'font-size': '2em',
+                                    # 'color': 'rgb(64, 68, 72)',
+                                    'color': '#fff',
+                                    # 'background-color': c_1
+                                    }
+                            ),
+                            html.Br(),
+                            html.H6('Your strategy')
+                        ]
+                    ),
+                    dbc.Col(
+                        [
+                            html.Span(
+                                f'{ret_baseline:.2f} %',
+                                style={
+                                    'font-size': '2em',
+                                    # 'color': 'rgb(64, 68, 72)',
+                                    'color': '#fff',
+                                    # 'background-color': c_1
+                                    }
+                            ), 
+                            html.Br(),
+                            html.H6('Baseline')
+                        ]
+                    ),
                 ]
-                )(generate_update_picker_dropdown())
+                ),
+        ]
+        # strat_ret = results['Cum_Returns_Strat'][-1]
+        # bh_ret = results['Cum_Returns_Baseline'][-1]
+    return fig, textbox
 
-    app.callback(
-                [
-                        Output('hist-graph', 'figure'),
-                        Output(str(num) + 'strategyTestResults', 'data')
-                ],
-                [
-                        Input(str(num) + 'strategyTest', 'value')
-                ],
-                [
-                        State(str(num) + 'chart', 'relayoutData'),
-                        State(str(num) + 'stock_picker', 'value'),
-                        State('selected-index-div', 'value')
-                ],
-                )(generate_strategyTest_callback(num))
+
+# for num in range(0,1):
+#     app.callback(
+#                 [
+#                         Output('selected-index-div', 'value'),
+#                         Output(str(num) + 'stock_picker', 'options'),
+#                         Output('IndexListTable', 'data')
+#                 ],
+#                 [
+#                         Input('stockIndexTabs', 'value')
+#                 ]
+#                 )(generate_update_picker_dropdown())
+
+    # app.callback(
+    #             [
+    #                     Output('hist-graph', 'figure'),
+    #                     Output(str(num) + 'strategyTestResults', 'data')
+    #             ],
+    #             [
+    #                     Input(str(num) + 'strategyTest', 'value')
+    #             ],
+    #             [
+    #                     State(str(num) + 'chart', 'relayoutData'),
+    #                     State(str(num) + 'stock_picker', 'value'),
+    #                     State('selected-index-div', 'value')
+    #             ],
+    #             )(generate_strategyTest_callback(num))
 #    cache.memoize(timeout=100)
     # app.callback(
                 #     Output(str(num) + 'info_div', 'children'),

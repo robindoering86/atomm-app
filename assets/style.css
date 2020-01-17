@@ -73,7 +73,6 @@ p {
 .submenu {
     background-color: rgb(64, 68, 72);
 }
-
 .content
 {
     text-align: center;
@@ -240,10 +239,14 @@ p {
 }
 
 .cgreen {
-    color: rgb(12, 205, 24);
+    background-color: rgb(12, 205, 24, 0.5);
+    line-height: 14px;
+    color: rgb(64, 68, 72);
     }
 .cred {
-    color: rgb(205, 12, 24);
+    background-color: rgba(205, 12, 24, 0.5);
+    line-height: 14px;
+    color: rgb(64, 68, 72);
 }
 
 .switch-field input[type = 'radio'] {

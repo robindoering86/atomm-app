@@ -36,6 +36,17 @@ def d_close(df):
         )
     return trace
 
+def cum_returns(df, col, name='Returns', showlegend=False):
+    trace = go.Scatter(
+        x = df.index,
+        y = df[col],
+        mode = 'lines',
+        name = name,
+        showlegend = showlegend,
+        line = {'width': 2}
+        )
+    return trace
+
 def ohlc(df):
     trace = go.Candlestick(x = df.index,
                            open = df['Open'],
