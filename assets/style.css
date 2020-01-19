@@ -9,7 +9,13 @@ html {
     color: rgb(219, 240, 238)
     }
 
+a.nav-link {
+    color: rgb(219, 240, 238);
+}
 
+a.nav-link:hover, a.nav-link.active {
+    color: rgb(255, 114, 33);
+}
 body
 {
     background-color: rgb(229, 232, 230);
