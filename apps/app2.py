@@ -44,11 +44,25 @@ options = dh.IndexConstituentsDict('SPY')
 spy_info = pd.read_csv('./data/spy.csv')
 models = [
     {'label': 'RandomForest_1', 'value': 'RF_1'},
-    {'label': 'XGBoost_1', 'value': 'XGB_1'}  
+    {'label': 'RF_trained_for_T', 'value': 'RF_trained_for_T'},
+    {'label': 'RF_trained_for_IBM', 'value': 'RF_trained_for_IBM'},
+    {'label': 'RF_trained_for_ABC', 'value': 'RF_trained_for_ABC'},
+    {'label': 'RF_trained_for_PFG', 'value': 'RF_trained_for_PFG'},
+
+    {'label': 'RandomForest_1_three-class_T', 'value': 'RF_1_three_class_T'},
+    {'label': 'RF_two_class_thresh_T', 'value': 'RF_two_class_thresh_T'},
+
     ]
 
 model_dict = {
-    'RF_1': 'RF_best.joblib'
+    'RF_1': 'RF_best.joblib',
+    'RF_trained_for_T': 'RF_T.joblib',
+    'RF_trained_for_IBM': 'RF_IBM.joblib',
+    'RF_trained_for_ABC': 'RF_ABC.joblib',
+    'RF_trained_for_PFG': 'RF_PFG.joblib',
+
+    'RF_1_three_class_T': 'RF_three_class_T.joblib',
+    'RF_two_class_thresh_T': 'RF_two_class_thresh_T.joblib',
     }
 
 chart_layout = {
@@ -282,6 +296,7 @@ def return_tearsheet(df, names, start_date, end_date):
     fig['layout']['yaxis1'].update(
         autorange = True,
         showgrid = True,
+        title = 'Cumulative Returns (%)',
         tickformat = '%',
         anchor = 'x1', 
         mirror = 'ticks',
@@ -381,12 +396,10 @@ def run_model(
         start_date = datetime.today()-relativedelta(years=1),
         end_date = datetime.today()
         ):
-    print(str(n_clicks)+'vc efkjv irv ijgr vi vji')
     if n_clicks > 0 and n_clicks is not None:
         start_date = datetime.strptime(start_date.split(' ')[0], '%Y-%m-%d')
         end_date = datetime.strptime(end_date.split(' ')[0], '%Y-%m-%d')
         symbol = symbol.split('-')[0].strip()
-        print(symbol)
         df = dh.ReturnData(symbol, start_date=start_date, end_date=end_date)
         prices = df.copy()
         lookback_windows = [3, 5, 7, 10, 15, 20, 25, 30]
@@ -399,7 +412,6 @@ def run_model(
         y_pred = model.predict(X_test)
         results = calcReturns(y_pred, 1, prices[max(lookback_windows):])
         results['predictions'] = y_pred
-        
         fig = return_tearsheet(
             results,
             ['Cum_Returns_Strat', 'Cum_Returns_Baseline'],
