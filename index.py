@@ -8,6 +8,7 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 
 from app import app
+#from app import server
 from apps import app1, app2
 
 from atomm.DataManager.main import MSDataManager
@@ -15,6 +16,7 @@ dh = MSDataManager()
 options = dh.IndexConstituentsDict('SPY')
 spy_info = pd.read_csv('./data/spy.csv')
 
+server = app.server
 
 def search_list():
     search_list = []
