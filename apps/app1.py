@@ -346,6 +346,7 @@ def chart_fig_callback(ticker_list, trace_type, studies, timeRange,
                        start_date, end_date)
     fig = get_fig(ticker_list, trace_type, studies,  
                   start_date, end_date)
+    app.title = (f'{ticker_list}')
     return fig
 
 @app.callback(
