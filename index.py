@@ -106,7 +106,7 @@ app.layout = html.Div([
      ]
     )
 def display_page(pathname):
-    if pathname == ('/apps/app1' or '/'):
+    if pathname in ['/apps/app1', '', '/']:
         return app1.layout
     if pathname == '/apps/app2':
         return app2.layout
