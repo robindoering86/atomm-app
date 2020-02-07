@@ -13,6 +13,6 @@ import dash_bootstrap_components as dbc
 
 
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], url_base_pathname='/')
-server = app.server
+#server = app.server
 app.config.suppress_callback_exceptions = True
 app.title = 'atomm web app'

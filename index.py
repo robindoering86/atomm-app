@@ -16,8 +16,6 @@ dh = MSDataManager()
 options = dh.IndexConstituentsDict('SPY')
 spy_info = pd.read_csv('./data/spy.csv')
 
-server = app.server
-
 def search_list():
     search_list = []
     for i in options:
@@ -115,6 +113,7 @@ def display_page(pathname):
     else:
         return '404'
 
+server = app.server
 
-if __name__ == '__main__':
-    app.run_server(debug=False)
+#if __name__ == '__main__':
+#    app.run_server(debug=False)
