@@ -62,7 +62,7 @@ p {
 .one-column {width: 98%;}
 .two-column {width: 48%;}
 .three-column {width: 32.66%;}
-/*                                                                                                                                                             
+/*
 .info_bar div {
     display: inline-block;
     margin-right: 17px;
@@ -92,7 +92,7 @@ p {
     /*background: radial-gradient(circle, black, white) url(http://www.atomm.de:8080/wp-content/uploads/2020/01/logo.png);*/
 	font-family: 'Rajdhani', sans-serif !important;
 	font-weight: 600;
-	
+
 }
 
 .content_header
@@ -151,7 +151,7 @@ p {
 }
 
 .stock_picker, study_picker {
-    
+
 }
 
 .menu_bar {
@@ -191,7 +191,7 @@ p {
 .menu_bar_right button, .add_chart button, .dash-spreadsheet-container .dash-spreadsheet-inner td.dash-select-cell checkbox  {
     cursor: pointer;
     border: 0;
-    background-color: none; 
+    background-color: none;
     font-family: "jaf-facitweb","Helvetica Neue",Arial,sans-serif;
     content: "\00d7"; /* use the hex value here... */
     font-size: 24px;
@@ -263,7 +263,7 @@ p {
 }
 .switch-field label:checked.time-range-label
 {
-    font-weigth: 2000;  
+    font-weigth: 2000;
 }
 .switch-field label:hover {
     cursor: pointer;
@@ -281,7 +281,7 @@ p {
     border-bottom: 5px solid rgb(100, 220, 80);
     &::after {
     border-bottom: 5px solid #000;
-    
+
     }
 }
 
@@ -304,4 +304,11 @@ p {
     margin: 0 .25em .25em;
     text-decoration: none;
     vertical-align: top;
+}
+
+.material-icons {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px !important;
 }

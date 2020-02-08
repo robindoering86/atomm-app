@@ -32,6 +32,22 @@ colorscale = cl.scales['12']['qual']['Paired']
 cgreen = 'rgb(12, 205, 24)'
 cred = 'rgb(205, 12, 24)'
 
+dh = MSDataManager()
+options = dh.IndexConstituentsDict('SPY')
+spy_info = pd.read_csv('./data/spy.csv')
+
+def search_list():
+    search_list = []
+    for i in options:
+        sym = i.get('value')
+        try:
+            sec = spy_info[spy_info['Symbol'] == sym]['Security'].values[0]
+        except:
+            continue
+        search_list.append(f'{sym} - {sec}')
+    return search_list
+suggestions = search_list()
+
 
 dh = MSDataManager()
 options = dh.IndexConstituentsDict('SPY')
@@ -46,7 +62,7 @@ config['indicators'] = [
      {'label': '30 day exponetial moving average', 'value': 'EMA30'},
          'subplot': False
      },
-    {'selector': 
+    {'selector':
         {'label': '10 day Simple moving average', 'value': 'SMA10'},
         'subplot': False
      },
@@ -94,32 +110,34 @@ config['indicators'] = [
     ]
 
 subplot_traces = [i.get('selector').get('value') for i in config.get('indicators') if i.get('subplot')]
-indicators = [i.get('selector') for i in config.get('indicators')] 
+indicators = [i.get('selector') for i in config.get('indicators')]
 chart_layout = {
     'height': 600,
-    'margin': {'b': 30, 'r': 60, 'l': 40, 't': 10},                                    
-    'plot_bgcolor': '#222222',
-    'paper_bgcolor': '#222222',
+    'margin': {'b': 10, 'r': 20, 'l': 0, 't': 10},
+    'plot_bgcolor': '#131722',
+    'paper_bgcolor': '#131722',
     'autosize': True,
     'uirevision': 'The User is always right',
     'hovermode': 'x',
     'spikedistance': -1,
     'xaxis': {
-        'gridcolor': 'rgba(255, 255, 255, 0.5)',              
+        'gridcolor': 'rgba(255, 255, 255, 0.5)',
         'gridwidth': .5, 'showspikes': True,
         'spikemode': 'across',
         'spikesnap': 'data',
         'spikecolor': 'rgb(220, 200, 220)',
-        'spikethickness': 1, 
-        'spikedash': 'dot'
+        'spikethickness': 1,
+        'spikedash': 'dot',
+        'showline': True,
         },
     'yaxis': {
-        'gridcolor': 'rgba(255, 255, 255, 0.5)', 
-        'gridwidth': .5
+        'gridcolor': 'rgba(255, 255, 255, 0.5)',
+        'gridwidth': .5,
+        'showline': True,
         },
     'legend': {'x': 1.05, 'y': 1}
     }
-                
+
 
 def create_submenu():
     body = dbc.Container([
@@ -133,7 +151,7 @@ def create_submenu():
                 ),
             dbc.Col([
                 html.H6('Select Technical Indicator'),
-                   
+
                 dcc.Dropdown(id = '0study_picker',
                               options = indicators,
                               multi = True,
@@ -141,12 +159,12 @@ def create_submenu():
                               placeholder = 'Select studies',
                               className = 'dash-bootstrap'
                               ),
-                    
+
                 ],
                 md=4,
                 className='border-left pl-4 pr-4 pt-2 pb-2',
                 ),
-            
+
             dbc.Col([
                 html.H6('Chart Style'),
                 dbc.RadioItems(
@@ -157,20 +175,60 @@ def create_submenu():
                             ],
                             value='ohlc',
                             className='inline-block',
-                        ),                    
+                        ),
                 ],
                 md=4,
                 className='border-left pl-4 pr-4 pt-2 pb-2',
                 ),
             ],
             className='',
-            )],
+            ),
+        dbc.Row(
+        [
+            dbc.Nav(
+            [
+                dbc.NavItem(dbc.NavLink([html.Span([html.I('settings', className='material-icons')])], href="#"), id='settings_but', className='border-right'),
+                dbc.Tooltip(
+                    'Settings',
+                    target='settings_but',
+                    ),
+                dbc.NavItem(dbc.NavLink([html.Span([html.I('show_chart', className='material-icons')])], href="#"), id='chart_style_but', className='border-right'),
+                dbc.Tooltip(
+                    'Select Chart Style.',
+                    target='chart_style_but',
+                    ),
+                dbc.NavItem(dbc.NavLink([html.Span([html.I('trending_up', className='material-icons'), 'Indicators'], style={'display': 'inline-block', 'vertical-align': 'middle'})], active=False, href="#"), className='border-right'),
+                #dbc.NavItem(
+                #[
+                    html.Datalist(
+                        id='list-suggested-inputs',
+                        children=[html.Option(value=word) for word in suggestions]
+                        ),
+                dbc.NavItem(
+                    dbc.Input(
+                        id='stock_picker',
+                        list='list-suggested-inputs',
+                        placeholder='Search for stock',
+                        value='MMM - 3M Company',
+                        type='text',
+                        size='30',
+                        className='bg-dark border-0 text-light pl-2 pr-2 pt-1 pb-1'
+                        ),
+                #],
+                        className='border-right'
+                        ),
+
+                ],
+                pills=False,
+                )
+        ]
+        )],
         className='border-bottom submenu',
         fluid=True,
         )
     return body
-    
-def create_chart_div():      
+
+def create_chart_div():
     chart = dbc.Container(
         dbc.Row([
             dbc.Col([
@@ -185,7 +243,7 @@ def create_chart_div():
                         'scrollZoom': False,
                         'fillFrame': False
                         },
-                    )            
+                    )
                 ],
                 md=12,
                 className='m-0',
@@ -224,7 +282,7 @@ def get_fig(ticker, type_trace, studies, start_date, end_date):
     if ticker is not (None or ''):
         dh = MSDataManager()
         df = dh.ReturnData(ticker, start_date=start_date, end_date=end_date)
- 
+
     selected_subplots_studies = []
     selected_first_row_studies = []
     row = 2  # number of subplots
@@ -245,11 +303,11 @@ def get_fig(ticker, type_trace, studies, start_date, end_date):
         vertical_spacing = 0.05,
         row_width = [0.2]*(row-1)+[1-(row-1)*0.2]
     )
-    
+
     fig.append_trace(globals()[type_trace](df), 1, 1)
-    
+
     fig['layout'][f'xaxis{row}'].update(
-        tickangle= -0, 
+        tickangle= -0,
         tickformat = '%Y-%m-%d',
         autorange = True,
         showgrid = True,
@@ -263,7 +321,7 @@ def get_fig(ticker, type_trace, studies, start_date, end_date):
             df['Close'].max()*1.05
         ],
         showgrid = True,
-        anchor = 'x1', 
+        anchor = 'x1',
         mirror = 'ticks',
         layer = 'above traces',
         color = 'rgba(255, 255, 255, 1)',
@@ -271,7 +329,7 @@ def get_fig(ticker, type_trace, studies, start_date, end_date):
         )
     fig['layout']['yaxis2'].update(
         autorange = True,
-        side = 'left', 
+        side = 'left',
         showgrid = True,
         title = 'D. Trad. Vol.',
         color = 'rgba(255, 255, 255, 1)',
@@ -342,9 +400,9 @@ def chart_fig_callback(ticker_list, trace_type, studies, timeRange,
     start_date, end_date = to.axisRangeToDate(timeRange)
     ticker_list = ticker_list.split('-')[0].strip()
     if oldFig is None or oldFig == {'layout': {}, 'data': {}}:
-        return get_fig(ticker_list, trace_type, studies,  
+        return get_fig(ticker_list, trace_type, studies,
                        start_date, end_date)
-    fig = get_fig(ticker_list, trace_type, studies,  
+    fig = get_fig(ticker_list, trace_type, studies,
                   start_date, end_date)
     app.title = (f'{ticker_list}')
     return fig
