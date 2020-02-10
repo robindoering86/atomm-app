@@ -122,5 +122,5 @@ def display_page(pathname):
 
 server = app.server
 
-#if __name__ == '__main__':
-#    app.run_server(debug=False)
+if __name__ == '__main__':
+    app.run_server(debug=False, dev_tools_hot_reload=True)

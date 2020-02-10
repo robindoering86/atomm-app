@@ -77,7 +77,19 @@ p {
 }
 */
 .submenu {
-    background-color: rgb(64, 68, 72);
+    /*background-color: rgb(64, 68, 72);*/
+    background-color: #131722;
+}
+#chart_style_but a.nav-link {
+  /*content: "show_chart";*/
+  color: rgb(219, 240, 238);
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px !important;
+}
+.modal-dark {
+  background-color: #343a40/*#1e222d;*/
 }
 .content
 {
@@ -85,7 +97,7 @@ p {
     width: 100%;
     display: inline-block;
     /*background-color: rgb(64, 68, 72);*/
-    background-color: #222;
+    background-color: #131722;
 }
 .navbar-brand {
     /*background:  url(./logo.png) no-repeat center left;*/

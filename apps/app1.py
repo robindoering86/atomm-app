@@ -112,7 +112,7 @@ config['indicators'] = [
 subplot_traces = [i.get('selector').get('value') for i in config.get('indicators') if i.get('subplot')]
 indicators = [i.get('selector') for i in config.get('indicators')]
 chart_layout = {
-    'height': 600,
+    #'height': '100vh',
     'margin': {'b': 10, 'r': 20, 'l': 0, 't': 10},
     'plot_bgcolor': '#131722',
     'paper_bgcolor': '#131722',
@@ -137,52 +137,101 @@ chart_layout = {
         },
     'legend': {'x': 1.05, 'y': 1}
     }
+def build_modal():
+    modal = []
+    for ind in indicators:
+        btn = dbc.Button(
+            f'{ind["label"]}',
+            id=f'{ind["value"]}_collapse_button',
+            className="mb-1 w-100 text-left",
+            color='dark',
+            size='sm',
+            )
+        modal.append(btn)
+        collapse = dbc.Collapse(
+            [
+                dbc.InputGroup(
+                [
+                    dbc.InputGroupAddon('Set window length (default=30)', addon_type='prepend'),
+                    dbc.Input(type='number', step=1, value=30, bs_size='sm', id=f'{ind["value"]}_win'),
+                    dbc.InputGroupAddon(
+                        dbc.Button('Set', id=f'set_{ind["value"]}', size='sm', className='')
+                    ),
+                ],
+                size='sm',
+                )
+            ],
+                id=f'{ind["value"]}_collapse',
+            )
+        modal.append(collapse)
+    return modal
+
+def create_indicator_modal():
+    indicator_modal = dbc.Modal(
+                    [
+                        dbc.ModalHeader(
+                        [
+                            'Indicators',
+                            dbc.Button(
+                                'Close',
+                                id='close_indicator_modal',
+                                className='ml-auto'
+                                )
+                        ]
+                        ),
+                        dbc.ModalBody(
+                            build_modal()
+                        ),
+                        #dbc.ModalFooter(
+
+                        #),
+                    ],
+                    id='indicator_modal',
+                    size='lg',
+                    centered=True,
+                    contentClassName='modal-dark',
+                    scrollable=True,
+                    backdrop=False,
+                    )
+    return indicator_modal
 
 
 def create_submenu():
     body = dbc.Container([
-        dbc.Row(
-            [
-            dbc.Col(
-                children=[],
-                md=4,
-                className='pl-4 pr-4 pt-2 pb-2',
-                id='infodiv'
-                ),
-            dbc.Col([
-                html.H6('Select Technical Indicator'),
-
-                dcc.Dropdown(id = '0study_picker',
-                              options = indicators,
-                              multi = True,
-                              value = [],
-                              placeholder = 'Select studies',
-                              className = 'dash-bootstrap'
-                              ),
-
-                ],
-                md=4,
-                className='border-left pl-4 pr-4 pt-2 pb-2',
-                ),
-
-            dbc.Col([
-                html.H6('Chart Style'),
-                dbc.RadioItems(
-                            id = '0trace_style',
-                            options=[
-                                {'label': 'Line Chart', 'value': 'd_close'},
-                                {'label': 'Candlestick', 'value': 'ohlc'}
-                            ],
-                            value='ohlc',
-                            className='inline-block',
-                        ),
-                ],
-                md=4,
-                className='border-left pl-4 pr-4 pt-2 pb-2',
-                ),
-            ],
-            className='',
-            ),
+        # dbc.Row(
+        #     [
+        #     dbc.Col(
+        #         children=[],
+        #         md=4,
+        #         className='pl-4 pr-4 pt-2 pb-2',
+        #         id='infodiv'
+        #         ),
+        #     dbc.Col([
+        #         html.H6('Select Technical Indicator'),
+        #
+        #         dcc.Dropdown(id = '0study_picker',
+        #                       options = indicators,
+        #                       multi = True,
+        #                       value = [],
+        #                       placeholder = 'Select studies',
+        #                       className = 'dash-bootstrap'
+        #                       ),
+        #
+        #         ],
+        #         md=4,
+        #         className='border-left pl-4 pr-4 pt-2 pb-2',
+        #         ),
+        #
+        #     dbc.Col([
+        #         html.H6('Chart Style'),
+        #
+        #         ],
+        #         md=4,
+        #         className='border-left pl-4 pr-4 pt-2 pb-2',
+        #         ),
+        #     ],
+        #     className='',
+        #     ),
         dbc.Row(
         [
             dbc.Nav(
@@ -192,18 +241,25 @@ def create_submenu():
                     'Settings',
                     target='settings_but',
                     ),
-                dbc.NavItem(dbc.NavLink([html.Span([html.I('show_chart', className='material-icons')])], href="#"), id='chart_style_but', className='border-right'),
+                #dbc.NavItem(dbc.NavLink([html.Span([html.I('show_chart', className='material-icons')])], href="#"), id='chart_style_but', className='border-right'),
                 dbc.Tooltip(
                     'Select Chart Style.',
                     target='chart_style_but',
                     ),
-                dbc.NavItem(dbc.NavLink([html.Span([html.I('trending_up', className='material-icons'), 'Indicators'], style={'display': 'inline-block', 'vertical-align': 'middle'})], active=False, href="#"), className='border-right'),
-                #dbc.NavItem(
-                #[
-                    html.Datalist(
-                        id='list-suggested-inputs',
-                        children=[html.Option(value=word) for word in suggestions]
-                        ),
+                dbc.NavItem(
+                    dbc.Button(
+                                #'trending_up',
+                        'Indicators',
+                        id='open_indicator_modal',
+                        color='link',
+                    ),
+                    className='border-right'
+                ),
+                create_indicator_modal(),
+                html.Datalist(
+                    id='list-suggested-inputs',
+                    children=[html.Option(value=word) for word in suggestions]
+                ),
                 dbc.NavItem(
                     dbc.Input(
                         id='stock_picker',
@@ -217,6 +273,26 @@ def create_submenu():
                 #],
                         className='border-right'
                         ),
+                dbc.NavItem(
+                    dbc.DropdownMenu(
+                        [
+                            dbc.DropdownMenuItem('Candles', id='btn_style_candles', active=True),
+                            dbc.DropdownMenuItem('Line', id='btn_style_line', active=False),
+                        ],
+                        nav=True,
+                        label='show_chart',
+                        caret=False,
+                        color='link',
+                        id='chart_style_but',
+                        className=''
+                    ),
+                    id='test',
+                    className='border-right'
+                    ),
+                dbc.Tooltip(
+                    'Select Chart Style.',
+                    target='chart_style_but',
+                    ),
 
                 ],
                 pills=False,
@@ -243,6 +319,7 @@ def create_chart_div():
                         'scrollZoom': False,
                         'fillFrame': False
                         },
+                    style={'height': '85vh'}
                     )
                 ],
                 md=12,
@@ -273,8 +350,16 @@ layout = html.Div([
         ),
     html.Div(
         id='symbol_selected',
-        style={'display': 'inline-block'}
+        style={'display': 'none'}
         ),
+    html.Div(
+        id='chart_style_div',
+        style={'display': 'none'}
+    ),
+    html.Div(
+        id='selected_study_div',
+        style={'display': 'none'}
+    ),
         ])
 
 
@@ -286,7 +371,8 @@ def get_fig(ticker, type_trace, studies, start_date, end_date):
     selected_subplots_studies = []
     selected_first_row_studies = []
     row = 2  # number of subplots
-
+    if studies is None:
+        studies = []
     if studies != []:
         for study in studies:
             if study in subplot_traces:
@@ -336,13 +422,13 @@ def get_fig(ticker, type_trace, studies, start_date, end_date):
         )
 
     for study in selected_first_row_studies:
-        fig = globals()[study](df, fig)  # add trace(s) on fig's first row
+        fig = globals()[study['name']](df, fig, **study['args'])  # add trace(s) on fig's first row
 
     row = 2
     fig = vol_traded(df, fig, row)
     for study in selected_subplots_studies:
         row += 1
-        fig = globals()[study](df, fig, row)  # plot trace on new row
+        fig = globals()[study['name']](df, fig, row, **study['args'])  # plot trace on new row
 
     fig['layout'].update(chart_layout)
     fig['layout']['xaxis'].update(
@@ -383,12 +469,51 @@ def get_fig(ticker, type_trace, studies, start_date, end_date):
 ####
 # Creates a list of selected stocks in hidden Div
 ####
+# @app.callback(
+#         Output('chart_style_div', 'children'),
+#     [
+#         Input('chart_style_candle', 'n_clicks'),
+#         Input('chart_style_line', 'n_clicks')
+#     ]
+# )
+# def set_chart_style(n1, n2):
+#     if n1:
+#         return 'ohlc'
+#     if n2:
+#         return 'd_close'
+
+@app.callback(
+    [
+        Output('chart_style_div', 'children'),
+        Output('btn_style_candles', 'active'),
+        Output('btn_style_line', 'active'),
+    ],
+    [
+        Input('btn_style_candles', 'n_clicks'),
+        Input('btn_style_line', 'n_clicks'),
+    ],
+)
+def toggle_buttons(candles, line):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    else:
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    if not any([candles, line,]):
+        return 'ohlc', False, False
+    elif button_id == 'btn_style_candles':
+        return 'ohlc', True, False
+    elif button_id == 'btn_style_line':
+        return 'd_close', False, True
+
+
 @app.callback(
         Output('0chart', 'figure'),
     [
         Input('symbol_selected', 'value'),
-        Input('0trace_style', 'value'),
-        Input('0study_picker', 'value'),
+        Input('chart_style_div', 'children'),
+        #Input('0study_picker', 'value'),
+        Input('selected_study_div', 'children'),
         Input('0chart', 'relayoutData'),
     ],
     [
@@ -407,66 +532,66 @@ def chart_fig_callback(ticker_list, trace_type, studies, timeRange,
     app.title = (f'{ticker_list}')
     return fig
 
-@app.callback(
-        Output('infodiv', 'children'),
-    [
-        Input('symbol_selected', 'value'),
-        Input('interval-component', 'n_intervals')
-    ]
-    )
-def info_div_callback(ticker, n_intervals):
-    ticker_sym = ticker.split('-')[0].strip()
-    ticker_sec = ticker.split('-')[1].strip()
-    dh = MSDataManager()
-    mh = MarketHours('NYSE')
-    mo_class = 'cgreen' if mh.MarketOpen else 'cred'
-    mo_str = 'open' if mh.MarketOpen else 'closed'
-    latest_trade_date = dh.ReturnLatestStoredDate(ticker_sym)
-    latest_trade_date_str = latest_trade_date.strftime('%d-%m-%Y - %H:%M:%S')
-    if ticker is not None:
-        data = dh.ReturnData(
-            ticker_sym,
-            start_date=latest_trade_date-relativedelta(years=1),
-            end_date = latest_trade_date,
-            limit=None
-            )
-    latest = data['Close'].iloc[-1]
-    diff = (data['Close'][-2]-data['Close'][-1])
-    pct_change = diff/data['Close'][-2]
-    pl_class = 'cgreen' if diff > 0 else 'cred'
-    pl_sign = '+' if diff > 0 else '-'
-    # pct_change = f''
-    ftwh = data['Close'].values.max()
-    ftwl = data['Close'].values.min()
-    #market_cap = data['market_cap'].iloc[-1]
-    # market_cap = 0
-    #curr = str(data['currency'].iloc[-1]).replace('EUR', '€')
-    curr = 'USD'
-    children = [
-        dbc.Row(
-            [
-                html.H6(f'{ticker_sec} ({ticker_sym})', className='')
-            ]
-            ),
-        dbc.Row(
-            [
-                dbc.Col([
-                    html.P(
-                    [
-                        html.Span(html.Strong(f'{curr} {latest:.2f} ', className=pl_class+' large bold')),
-                        html.Span(f'{pl_sign}{diff:.2f} ', className=pl_class+' small'),
-                        html.Span(f'({pl_sign}{pct_change:.2f}%)', className=pl_class+' small'),
-                        ],
-                    ),
-                    html.P(
-                        html.Span(f'As of {latest_trade_date_str}. Market {mo_str}.', className=' small')
-                        )
-                    ],
-                    md=12,
-                    ),
-                ]),
-            ]
-    return children
+# @app.callback(
+#         Output('infodiv', 'children'),
+#     [
+#         Input('symbol_selected', 'value'),
+#         Input('interval-component', 'n_intervals')
+#     ]
+#     )
+# def info_div_callback(ticker, n_intervals):
+#     ticker_sym = ticker.split('-')[0].strip()
+#     ticker_sec = ticker.split('-')[1].strip()
+#     dh = MSDataManager()
+#     mh = MarketHours('NYSE')
+#     mo_class = 'cgreen' if mh.MarketOpen else 'cred'
+#     mo_str = 'open' if mh.MarketOpen else 'closed'
+#     latest_trade_date = dh.ReturnLatestStoredDate(ticker_sym)
+#     latest_trade_date_str = latest_trade_date.strftime('%d-%m-%Y - %H:%M:%S')
+#     if ticker is not None:
+#         data = dh.ReturnData(
+#             ticker_sym,
+#             start_date=latest_trade_date-relativedelta(years=1),
+#             end_date = latest_trade_date,
+#             limit=None
+#             )
+#     latest = data['Close'].iloc[-1]
+#     diff = (data['Close'][-2]-data['Close'][-1])
+#     pct_change = diff/data['Close'][-2]
+#     pl_class = 'cgreen' if diff > 0 else 'cred'
+#     pl_sign = '+' if diff > 0 else '-'
+#     # pct_change = f''
+#     ftwh = data['Close'].values.max()
+#     ftwl = data['Close'].values.min()
+#     #market_cap = data['market_cap'].iloc[-1]
+#     # market_cap = 0
+#     #curr = str(data['currency'].iloc[-1]).replace('EUR', '€')
+#     curr = 'USD'
+#     children = [
+#         dbc.Row(
+#             [
+#                 html.H6(f'{ticker_sec} ({ticker_sym})', className='')
+#             ]
+#             ),
+#         dbc.Row(
+#             [
+#                 dbc.Col([
+#                     html.P(
+#                     [
+#                         html.Span(html.Strong(f'{curr} {latest:.2f} ', className=pl_class+' large bold')),
+#                         html.Span(f'{pl_sign}{diff:.2f} ', className=pl_class+' small'),
+#                         html.Span(f'({pl_sign}{pct_change:.2f}%)', className=pl_class+' small'),
+#                         ],
+#                     ),
+#                     html.P(
+#                         html.Span(f'As of {latest_trade_date_str}. Market {mo_str}.', className=' small')
+#                         )
+#                     ],
+#                     md=12,
+#                     ),
+#                 ]),
+#             ]
+#     return children
 
 @app.callback(
         Output('symbol_selected', 'value'),
@@ -476,3 +601,61 @@ def info_div_callback(ticker, n_intervals):
     )
 def select_symbol(symbol):
     return str(symbol)
+
+@app.callback(
+    Output('indicator_modal', 'is_open'),
+    [
+        Input('open_indicator_modal', 'n_clicks'),
+        Input('close_indicator_modal', 'n_clicks')],
+    [
+        State('indicator_modal', 'is_open')
+    ],
+)
+def toggle_modal(n1, n2, is_open):
+    if n1 or n2:
+        return not is_open
+    return is_open
+
+@app.callback(
+        Output('selected_study_div', 'children'),
+    [
+        Input(f'set_{ind["value"]}', 'n_clicks') for ind in indicators
+    ],
+    [
+        State('selected_study_div', 'children'),
+        State('EMA10_win', 'value'),
+    ],
+)
+def set_indicators(n_clicks, selected_studies, *args):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        raise PreventUpdate
+    else:
+        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    selected_studies[button_id] = args
+    return selected_studies
+
+# def toggle_collapse(n, is_open):
+#     if n:
+#         return not is_open
+#     return is_open
+# for ind in indicators:
+#     app.callback(
+#         Output(f'{ind["value"]}_collapse', 'is_open'),
+#         [Input(f'{ind["value"]}_collapse_button', 'n_clicks')],
+#         [State(f'{ind["value"]}_collapse', 'is_open')],
+#     )(toggle_collapse)
+
+
+from dash.dependencies import ClientsideFunction
+
+for ind in indicators:
+    app.clientside_callback(
+        ClientsideFunction(
+            namespace='clientside',
+            function_name='toggle_collapse'
+        ),
+        Output(f'{ind["value"]}_collapse', 'is_open'),
+        [Input(f'{ind["value"]}_collapse_button', 'n_clicks')],
+        [State(f'{ind["value"]}_collapse', 'is_open')]
+    )

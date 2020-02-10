@@ -211,9 +211,9 @@ def MOM1(df, start_date, end_date, n_roc = 5, n_macd_short = 12, n_macd_long = 2
 ####
 # Studies
 ####
-def EMA10(df, fig):
+def EMA10(df, fig, n=10):
     mi = MomentumIndicators(df)
-    trace = (go.Scattergl(x = df.index, y = mi.calcEMA(10), showlegend = False, name = 'EMA10'))
+    trace = (go.Scattergl(x = df.index, y = mi.calcEMA(n), showlegend = False, name = f'EMA{n}'))
     fig.append_trace(trace, 1, 1)
     return fig
 def EMA30(df, fig):
