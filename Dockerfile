@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y git
 
 COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt
-RUN pip3 install gunicorn
+RUN pip3 install gunicorn && pip3 install sklearn
 
 COPY ./ /app
 WORKDIR /app

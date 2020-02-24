@@ -25,7 +25,7 @@ def search_list():
         except:
             continue
         search_list.append(f'{sym} - {sec}')
-    return search_list
+    return sorted(search_list)
 
 
 suggestions = search_list()         
@@ -61,7 +61,7 @@ def create_navbar():
                     [
                         dbc.Col([
                             html.Img(src=app.get_asset_url('logo.png'), height='35px'),
-                            dbc.NavbarBrand([html.P(html.H5('atomm'))], className='ml-1')                               
+                            #dbc.NavbarBrand([html.P(html.H5('atomm'))], className='ml-1')                               
                                  ]),
   
                     ],

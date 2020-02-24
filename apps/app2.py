@@ -56,10 +56,10 @@ models = [
 
 model_dict = {
     'RF_1': 'RF_best.joblib',
-    'RF_trained_for_T': 'RF_T.joblib',
-    'RF_trained_for_IBM': 'RF_IBM.joblib',
-    'RF_trained_for_ABC': 'RF_ABC.joblib',
-    'RF_trained_for_PFG': 'RF_PFG.joblib',
+    'RF_trained_for_T': 'RF1_T.joblib',
+    'RF_trained_for_IBM': 'RF1_IBM.joblib',
+    'RF_trained_for_ABC': 'RF1_ABC.joblib',
+    'RF_trained_for_PFG': 'RF1_PFG.joblib',
 
     'RF_1_three_class_T': 'RF_three_class_T.joblib',
     'RF_two_class_thresh_T': 'RF_two_class_thresh_T.joblib',
@@ -409,7 +409,7 @@ def run_model(
         X_test = calcIndicators(df, symbol, lookback_windows, ti_list)[max(lookback_windows):]
         
         model = load(model)
-        y_pred = model.predict(X_test)
+        y_pred = model.predict(X_test.fillna(0))
         results = calcReturns(y_pred, 1, prices[max(lookback_windows):])
         results['predictions'] = y_pred
         fig = return_tearsheet(
