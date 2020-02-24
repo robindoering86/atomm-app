@@ -28,7 +28,7 @@ def search_list():
     return sorted(search_list)
 
 
-suggestions = search_list()         
+suggestions = search_list()
 search_bar = dbc.Row(
     [
         html.Datalist(
@@ -60,10 +60,17 @@ def create_navbar():
                 dbc.Row(
                     [
                         dbc.Col([
-                            html.Img(src=app.get_asset_url('logo.png'), height='35px'),
-                            #dbc.NavbarBrand([html.P(html.H5('atomm'))], className='ml-1')                               
+                            html.Img(
+                                src=app.get_asset_url('logo.png'),
+                                height='35px'
+                                ),
+                            dbc.NavbarBrand(
+                                [
+                                #html.P(html.H5('atomm'))
+                                ],
+                                className='ml-1')
                                  ]),
-  
+
                     ],
                     align='center',
                     no_gutters=True,
@@ -82,7 +89,7 @@ def create_navbar():
                 id="navbar-collapse",
                 navbar=True,
                 className='mx-auto display-block'
-                ),  
+                ),
         ],
         color="dark",
         dark=True,
@@ -115,5 +122,5 @@ def display_page(pathname):
 
 server = app.server
 
-#if __name__ == '__main__':
-#    app.run_server(debug=False)
+if __name__ == '__main__':
+    app.run_server(debug=False, dev_tools_hot_reload=True)

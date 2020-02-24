@@ -11,14 +11,16 @@ import numpy as np
 import plotly.graph_objs as go
 
 from atomm.Indicators import MomentumIndicators
-from atomm.DataManager.main import MSDataManager 
+from atomm.DataManager.main import MSDataManager
 import colorlover as cl
 colorscale = cl.scales['12']['qual']['Paired']
-cgreen = 'rgb(12, 205, 24)'
+#cgreen = 'rgb(12, 205, 24)'
+cgreen = 'rgb(38, 166, 154)'
 # cgreen = 'rgb(16, 30, 30)'
 # cgreen = 'rgb(45, 76, 80)'
 
-cred = 'rgb(205, 12, 24)'
+cred = 'rgb(239, 83, 80)'
+
 # cred = 'rgb(255, 114, 33)'
 
 
@@ -68,18 +70,36 @@ def average_close(df, index, ticker, fig):
     if data is not None:
         ftwh = data['52_week_high'].iloc[-1]
         ftwl = data['52_week_low'].iloc[-1]
-        trace = go.Scattergl(x = df.index, y = (np.zeros(len(df.index)) + ftwh), mode = 'lines', name = '52wh', showlegend = False, line = {'color': 'rgb(255, 255, 255)', 'width': 1, 'dash': 'dot'})
+        trace = go.Scattergl(
+            x = df.index,
+            y = (np.zeros(len(df.index)) + ftwh),
+            mode = 'lines', name = '52wh',
+            showlegend = False,
+            line = {'color': 'rgb(255, 255, 255)', 'width': 1, 'dash': 'dot'}
+            )
         fig.append_trace(trace, 1, 1)
-        trace = go.Scattergl(x = df.index, y = (np.zeros(len(df.index)) + df['Close'].mean()), mode = 'lines', name = 'Average', showlegend = False, line = {'color': 'rgb(255, 255, 255)', 'width': 1, 'dash': 'dot'})
+        trace = go.Scattergl(
+            x = df.index,
+            y = (np.zeros(len(df.index)) + df['Close'].mean()),
+            mode = 'lines', name = 'Average',
+            showlegend = False,
+            line = {'color': 'rgb(255, 255, 255)', 'width': 1, 'dash': 'dot'}
+            )
         fig.append_trace(trace, 1, 1)
-        trace = go.Scattergl(x = df.index, y = (np.zeros(len(df.index)) + ftwl), mode = 'lines', name = '52wl', showlegend = False, line = {'color': 'rgb(255, 255, 255)', 'width': 1, 'dash': 'dot'})
+        trace = go.Scattergl(
+            x = df.index,
+            y = (np.zeros(len(df.index)) + ftwl),
+            mode = 'lines',
+            name = '52wl',
+            showlegend = False,
+            line = {'color': 'rgb(255, 255, 255)', 'width': 1, 'dash': 'dot'})
         fig.append_trace(trace, 1, 1)
     return fig
 
 def bsMarkers(df, fig):
 #    df['Long'] = np.zeros(len(df))
 #    df['Short'] = np.zeros(len(df))
-#    
+#
 #    signalCol = df.columns.get_loc('Signal')
 #    closeCol = df.columns.get_loc('Close')
 #    longCol = df.columns.get_loc('Long')
@@ -96,14 +116,14 @@ def bsMarkers(df, fig):
 #            df['Short'].iat[i] = val1
 #        elif sig1 == 1 and sig2 == 0:
 #            df['Long'].iat[i] = 0
-#            df['Short'].iat[i] = val1    
+#            df['Short'].iat[i] = val1
 #        else:
 #            df['Long'].iat[i] = 0
 #            df['Short'].iat[i] = val1
 #    long = go.Scattergl(x = df.index, y = df['Long'], connectgaps = False, name = 'long', mode='lines+markers',fill='tozeroy', line = {'color': cgreen, 'width': 2})
 #    short = go.Scattergl(x = df.index, y = df['Short'], connectgaps = False, name = 'long', mode='lines+markers', fill='tozeroy', line = {'color': cred, 'width': 2})
-            
-            
+
+
     long = go.Scattergl(x = df.index, y = df['Close'].where(df['Signal'] == 1, None), showlegend = False, connectgaps = False, name = 'long', mode='lines', line = {'color': cgreen, 'width': 2})
     fig.append_trace(long, 1, 1)
     short = go.Scattergl(x = df.index, y = df['Close'].where(df['Signal'] == 0, None), showlegend = False, connectgaps = False, name = 'long', mode='lines', line = {'color': cred, 'width': 2})
@@ -136,7 +156,7 @@ def red_ref_line(df, y_pos, name):
 def MOM1(df, start_date, end_date, n_roc = 5, n_macd_short = 12, n_macd_long = 26, n_signal = 9, n_stoc = 7, n_rsi = 5):
     mi = MomentumIndicators(df)
     roc = mi.calcROC(n_roc)
- 
+
     macd = mi.calcMACD(n_macd_short, n_macd_long)
     df2 = df.copy()
     df2['Close'] = macd
@@ -150,10 +170,10 @@ def MOM1(df, start_date, end_date, n_roc = 5, n_macd_short = 12, n_macd_long = 2
     for i in range(len(stoc)):
         if (stoc[i] > 70) or (70 > stoc[i] > 30 and ind_stoc[i-1] == 1):
             ind_stoc[i] = 1
-        else:   
+        else:
             ind_stoc[i] = 0
     df['SignalSTOC'] = ind_stoc
-    
+
     ind_rsi = np.zeros(len(df))
     rsi = mi.calcRSI(n_rsi)
     for i in range(len(rsi)):
@@ -162,12 +182,12 @@ def MOM1(df, start_date, end_date, n_roc = 5, n_macd_short = 12, n_macd_long = 2
         else:
             ind_rsi[i] = 0
     df['SignalRSI'] = ind_def
-    
+
     df['Signal'] = np.ones(len(df))
     sig = df['SignalMACD'] + df['SignalROC'] + df['SignalSTOC'] + df['SignalRSI']
     df['Signal'] = df['Signal'].where(sig>=3).fillna(0)
-    df['bsSig'] = df['Signal'] - df['Signal'].shift(1) 
-    
+    df['bsSig'] = df['Signal'] - df['Signal'].shift(1)
+
     returnsList = []
     for i in range(len(df)):
         sig1 = df['bsSig'].iat[i]
@@ -191,11 +211,11 @@ def MOM1(df, start_date, end_date, n_roc = 5, n_macd_short = 12, n_macd_long = 2
 ####
 # Studies
 ####
-def EMA10(df, fig):
+def EMA10(df, fig, n=10):
     mi = MomentumIndicators(df)
-    trace = (go.Scattergl(x = df.index, y = mi.calcEMA(10), showlegend = False, name = 'EMA10'))
+    trace = (go.Scattergl(x = df.index, y = mi.calcEMA(n), showlegend = False, name = f'EMA{n}'))
     fig.append_trace(trace, 1, 1)
-    return fig    
+    return fig
 def EMA30(df, fig):
     mi = MomentumIndicators(df)
     trace = (go.Scattergl(x = df.index, y = mi.calcEMA(30), showlegend = False, name = 'EMA10'))
@@ -224,7 +244,7 @@ def BB202(df, fig):
         y = sma20,
         name = 'BB(20, 2)',
         line = {
-            #'color': 'rgb(250, 250, 250)',                
+            #'color': 'rgb(250, 250, 250)',
             'width': 1
             },
         showlegend = False)
@@ -235,7 +255,7 @@ def BB202(df, fig):
         y = lower,
         name = 'BB(20, 2)',
         line = {
-            'color': 'rgb(219, 240, 238)',                
+            'color': 'rgb(219, 240, 238)',
             'width': 1
             },
         showlegend = False
@@ -247,7 +267,7 @@ def BB202(df, fig):
         name = 'BB(20, 2)',
         showlegend = False,
         line = {
-            'color': 'rgb(219, 240, 238)',                
+            'color': 'rgb(219, 240, 238)',
             'width': 1
             },
         fill='tonexty',
@@ -259,12 +279,12 @@ def BB202(df, fig):
 def D_RETURNS(df, fig, row):
     d_return = df['Close'].pct_change()
     fig.append_trace((go.Scattergl(
-        x = df.index,                                
+        x = df.index,
         y = d_return.where(d_return >= 0).fillna(0),
         name = 'Daily return', mode = 'lines',
         connectgaps = True,
         showlegend = False,
-        line = {'width': 0}, 
+        line = {'width': 0},
         fill='tozeroy',
         fillcolor = 'rgba(12, 205, 24, 0.3)')
         ), row, 1)
@@ -283,16 +303,16 @@ def D_RETURNS(df, fig, row):
         x = df.index,
         y = d_return,
         name = 'Daily return',
-        mode = 'lines', 
+        mode = 'lines',
         line = {'color': 'rgb(250, 250, 250)', 'width': 1},
         showlegend = False,)
         ), row, 1)
     fig.append_trace((go.Scattergl(
         x = df.index,
         y = (np.zeros(len(df.index)) + d_return.mean()),
-        name = 'Avg. daily return', 
+        name = 'Avg. daily return',
         showlegend = False,
-        mode = 'lines', 
+        mode = 'lines',
         line = {'color': 'rgb(250, 250, 250)', 'width': 1})
         ), row, 1)
     fig['layout']['yaxis' + str(row)].update(autorange = True,
@@ -300,7 +320,7 @@ def D_RETURNS(df, fig, row):
        title  = 'Daily returns',
        gridcolor = 'rgba(255, 255, 255, 0.3)',
        color = 'rgba(255, 255, 255, 1)',
-       )    
+       )
     return fig
 
 def RSI(df, fig, row):
@@ -315,30 +335,30 @@ def RSI(df, fig, row):
         y = RSI1.where(RSI1 >= upper).fillna(upper),
         name = 'RSI',
         mode = 'lines',
-        showlegend = False, 
-        line = {'width': 0}, 
-        fill = 'tonexty', 
+        showlegend = False,
+        line = {'width': 0},
+        fill = 'tonexty',
         fillcolor = 'rgba(12, 205, 24, 0.3)',
         hoverinfo='skip')
         ), row, 1)
-    fig.append_trace(red_ref_line(df, lower, 'RSIREF30'), row, 1) 
+    fig.append_trace(red_ref_line(df, lower, 'RSIREF30'), row, 1)
     fig.append_trace((go.Scattergl(
         x = df.index,
-        y = RSI1.where(RSI1 < lower).fillna(lower), 
-        name = 'RSI', 
-        mode = 'lines', 
+        y = RSI1.where(RSI1 < lower).fillna(lower),
+        name = 'RSI',
+        mode = 'lines',
         showlegend = False,
-        line = {'width': 0}, 
-        fill = 'tonexty', 
-        fillcolor = 'rgba(205, 12, 24, 0.3)', 
+        line = {'width': 0},
+        fill = 'tonexty',
+        fillcolor = 'rgba(205, 12, 24, 0.3)',
         hoverinfo='skip')
         ), row, 1)
     fig.append_trace((go.Scattergl(
-        x = df.index, 
-        y = RSI1, 
-        name = 'RSI', 
-        mode = 'lines', 
-        showlegend = False, 
+        x = df.index,
+        y = RSI1,
+        name = 'RSI',
+        mode = 'lines',
+        showlegend = False,
         line = {'color': 'rgb(250, 250, 250)', 'width': 1})
         ), row, 1)
     fig['layout']['yaxis' + str(row)].update(autorange = True,
@@ -349,41 +369,41 @@ def RSI(df, fig, row):
        tickmode = 'array',
        tickvals = [30, 70],
        zeroline = False
-       )    
+       )
     return fig
 
 def ROC(df, fig, row):
     mi = MomentumIndicators(df)
     n = 5
-    ROC = mi.calcROC(n)   
+    ROC = mi.calcROC(n)
     fig.append_trace((go.Scattergl(
-        x = df.index, 
-        y = ROC.where(ROC >= 0).fillna(0), 
-        name = 'ROC(5)', 
-        mode = 'lines', 
+        x = df.index,
+        y = ROC.where(ROC >= 0).fillna(0),
+        name = 'ROC(5)',
+        mode = 'lines',
         connectgaps = True,
-        showlegend = False, 
+        showlegend = False,
         line = {'width': 0},
         fill='tozeroy',
         fillcolor = 'rgba(12, 205, 24, 0.3)')
         ), row, 1)
     fig.append_trace((go.Scattergl(
-        x = df.index, 
+        x = df.index,
         y = ROC.where(ROC < 0).fillna(0),
-        name = 'ROC(5)', 
+        name = 'ROC(5)',
         mode = 'lines',
         connectgaps = True,
         showlegend = False,
         line = {'width': 0},
-        fill='tozeroy', 
+        fill='tozeroy',
         fillcolor = 'rgba(205, 12, 24, 0.3)')
         ), row, 1)
     fig.append_trace((go.Scattergl(
         x = df.index,
-        y = ROC, 
-        name = 'ROC(5)', 
-        mode = 'lines', 
-        showlegend = False, 
+        y = ROC,
+        name = 'ROC(5)',
+        mode = 'lines',
+        showlegend = False,
         line = {'color': 'rgb(250, 250, 250)', 'width': 1})
         ), row, 1)
     fig['layout']['yaxis' + str(row)].update(autorange = True,
@@ -391,7 +411,7 @@ def ROC(df, fig, row):
        title  = 'ROC(' + str(n) + ')',
        gridcolor = 'rgba(255, 255, 255, 0.3)',
        color = 'rgba(255, 255, 255, 1)',
-       )    
+       )
     return fig
 
 
@@ -417,11 +437,11 @@ def MACD(df, fig, row):
     fig.append_trace((go.Scattergl(
         x = df.index,
         y = macd.where(macd < 0).fillna(0),
-        name = 'MACD(12,26)', 
-        mode = 'lines', 
-        connectgaps = True, 
-        showlegend = False, 
-        line = {'width': 0}, 
+        name = 'MACD(12,26)',
+        mode = 'lines',
+        connectgaps = True,
+        showlegend = False,
+        line = {'width': 0},
         fill='tozeroy',
         fillcolor = 'rgba(205, 12, 24, 0.3)')
         ), row, 1)
@@ -434,10 +454,10 @@ def MACD(df, fig, row):
         line = {'color': 'rgb(250, 250, 250)', 'width': 1})
         ), row, 1)
     fig.append_trace((go.Scattergl(
-        x = df.index, 
-        y = signal, 
+        x = df.index,
+        y = signal,
         name = 'EMA(9)',
-        mode = 'lines', 
+        mode = 'lines',
         showlegend = False,
         line = {'color': 'rgb(120, 120, 250)', 'width': 1})
         ), row, 1)
@@ -446,7 +466,7 @@ def MACD(df, fig, row):
        title  = 'MACD(' + str(n_fast) + ', ' + str(n_slow) + ')',
        gridcolor = 'rgba(255, 255, 255, 0.3)',
        color = 'rgba(255, 255, 255, 1)',
-       )    
+       )
     return fig
 
 def STOC(df, fig, row):
@@ -460,13 +480,13 @@ def STOC(df, fig, row):
         x = df.index,
         y = stoc.where(stoc >= upper).fillna(upper)
         , name = 'STOC(' + str(n)  + ')',
-        mode = 'lines', 
-        showlegend = False, 
-        line = {'width': 0}, 
-        fill='tonexty', 
+        mode = 'lines',
+        showlegend = False,
+        line = {'width': 0},
+        fill='tonexty',
         fillcolor = 'rgba(12, 205, 24, 0.3)')
         ), row, 1)
-    fig.append_trace(red_ref_line(df, lower, 'STOCREF' + str(lower)), row, 1) 
+    fig.append_trace(red_ref_line(df, lower, 'STOCREF' + str(lower)), row, 1)
     fig.append_trace((go.Scattergl(
         x = df.index,
         y = stoc.where(stoc < lower).fillna(lower),
@@ -507,7 +527,7 @@ def ATR(df, fig, row):
         tickmode = 'array',
         tickvals = [30, 70],
         zeroline = True
-        )    
+        )
     return fig
 
 def ADX(df, fig, row):
@@ -516,20 +536,20 @@ def ADX(df, fig, row):
     upper = 25
     lower = 25
     adx = mi.calcADX(n)
-    
-    fig.append_trace(green_ref_line(df, upper, 'ADXREF75'), row, 1)    
+
+    fig.append_trace(green_ref_line(df, upper, 'ADXREF75'), row, 1)
     fig.append_trace((go.Scattergl(
         x = df.index,
         y = adx.where(adx >= upper).fillna(upper),
         name = f'ADX({n})',
-        mode = 'lines', 
-        showlegend = False, 
-        line = {'width': 0}, 
-        fill = 'tonexty', 
+        mode = 'lines',
+        showlegend = False,
+        line = {'width': 0},
+        fill = 'tonexty',
         fillcolor = 'rgba(12, 205, 24, 0.3)')
         ), row, 1)
 
-    fig.append_trace(red_ref_line(df, lower, 'ADXREF25'), row, 1) 
+    fig.append_trace(red_ref_line(df, lower, 'ADXREF25'), row, 1)
     fig.append_trace((go.Scattergl(
         x = df.index,
         y = adx.where(adx < lower).fillna(lower),
@@ -541,11 +561,11 @@ def ADX(df, fig, row):
         fillcolor = 'rgba(205, 12, 24, 0.3)')
         ), row, 1)
     fig.append_trace(go.Scattergl(
-        x = df.index, 
-        y = adx, 
-        name = (f'ADX({n})'), 
-        mode = 'lines', 
-        showlegend = False, 
+        x = df.index,
+        y = adx,
+        name = (f'ADX({n})'),
+        mode = 'lines',
+        showlegend = False,
         line = {
             'color': 'rgb(250, 250, 250)',
             'width': 1})
@@ -559,7 +579,7 @@ def ADX(df, fig, row):
        tickmode = 'array',
        tickvals = [25, 50, 75],
        zeroline = True
-       )    
+       )
     return fig
 
 def WR(df, fig, row):
@@ -567,11 +587,11 @@ def WR(df, fig, row):
     n = 10
     wr = mi.calcWR(n)(n)
     fig.append_trace(go.Scattergl(
-        x = df.index, 
-        y = wr, 
-        name = (f'WR({n})'), 
-        mode = 'lines', 
-        showlegend = False, 
+        x = df.index,
+        y = wr,
+        name = (f'WR({n})'),
+        mode = 'lines',
+        showlegend = False,
         line = {
             'color': 'rgb(250, 250, 250)',
             'width': 1})
@@ -584,11 +604,11 @@ def WR(df, fig, row):
        tickmode = 'array',
        tickvals = [30, 70],
        zeroline = True
-       )    
+       )
     return fig
 
-    
-    
+
+
 
 # [,'williamsr', 'cci', , 'log_ret', 'adx' ,
 #             'stocd', ' 'autocorr_1',\
