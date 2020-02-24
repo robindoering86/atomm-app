@@ -25,7 +25,7 @@ def search_list():
         except:
             continue
         search_list.append(f'{sym} - {sec}')
-    return search_list
+    return sorted(search_list)
 
 
 suggestions = search_list()

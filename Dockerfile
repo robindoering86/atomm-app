@@ -7,9 +7,9 @@ RUN apt-get update && apt-get install -y git
 
 COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt
-RUN pip3 install gunicorn
+RUN pip3 install gunicorn && pip3 install sklearn
 
 COPY ./ /app
 WORKDIR /app
 EXPOSE 8001
-CMD gunicorn --bind 0.0.0.0:8001 index:server
+CMD gunicorn --bind 127.0.0.1:8001 index:server

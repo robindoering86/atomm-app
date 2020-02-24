@@ -240,30 +240,14 @@ def create_indicator_modal():
     indicator_modal = dbc.Modal(
                     [
                         dbc.ModalHeader(
-                            children=
-                                [
-                                    dbc.Row(
-                                        [
-                                            dbc.Col(
-                                                'Indicators',
-                                                className='',
-                                                width=8,
-                                            ),
-                                            dbc.Col(
-                                                dbc.Button(
-                                                    'X',
-                                                    id='close_indicator_modal',
-                                                    size='md',
-                                                    color='link',
-                                                    outline=True
-                                                ),
-                                                className='text-right',
-                                                width=4
-                                            ),
-                                        ],
-                                        className=''
-                                    )
-                                ]
+                        [
+                            'Indicators',
+                            dbc.Button(
+                                'Close',
+                                id='close_indicator_modal',
+                                className='ml-auto close'
+                                )
+                        ]
                         ),
                         dbc.ModalBody(
                             build_modal(),
@@ -630,7 +614,7 @@ def chart_fig_callback(
                        start_date, end_date)
     fig = get_fig(ticker_list, trace_type, studies,
                   start_date, end_date)
-    app.title = (f'{ticker_list}')
+    #app.title = (f'{ticker_list}')
     return fig
 
 # @app.callback(
