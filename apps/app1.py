@@ -11,7 +11,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_table as ddt
 import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output, State, ClientsideFunction
 import pandas as pd
 import plotly.graph_objs as go
 from plotly import tools
@@ -24,8 +24,6 @@ from atomm.Indicators import MomentumIndicators
 from atomm.DataManager.main import MSDataManager
 from atomm.Tools import MarketHours
 from app import app
-
-
 import colorlover as cl
 colorscale = cl.scales['12']['qual']['Paired']
 
@@ -45,7 +43,7 @@ def search_list():
         except:
             continue
         search_list.append(f'{sym} - {sec}')
-    return search_list
+    return sorted(search_list)
 suggestions = search_list()
 
 
@@ -55,43 +53,43 @@ spy_info = pd.read_csv('./data/spy.csv')
 config = {}
 config['indicators'] = [
     {'selector':
-     {'label': '10 day exponetial moving average', 'value': 'EMA10'},
+     {'label': 'Moving Average Exponential', 'value': 'EMA10'},
      'subplot': False
      },
+    # {'selector':
+    #  {'label': '30 day exponetial moving average', 'value': 'EMA30'},
+    #      'subplot': False
+    #  },
     {'selector':
-     {'label': '30 day exponetial moving average', 'value': 'EMA30'},
-         'subplot': False
+        {'label': 'Moving Average Simple', 'value': 'SMA10'},
+        'subplot': False
      },
+    # {'selector':
+    #     {'label': '30 day Simple moving average', 'value': 'SMA30'},
+    #     'subplot': False
+    #  },
     {'selector':
-        {'label': '10 day Simple moving average', 'value': 'SMA10'},
+        {'label': 'Bollinger Bands', 'value': 'BB202'},
         'subplot': False
      },
     {'selector':
-        {'label': '30 day Simple moving average', 'value': 'SMA30'},
-        'subplot': False
-     },
-    {'selector':
-        {'label': 'Bollinger Bands (20, 2)', 'value': 'BB202'},
-        'subplot': False
-     },
-    {'selector':
-         {'label': 'RSI', 'value': 'RSI'},
+         {'label': 'Relative Strength Indicator', 'value': 'RSI'},
          'subplot': True
      },
     {'selector':
-         {'label': 'ROC', 'value': 'ROC'},
+         {'label': 'Rate of Change', 'value': 'ROC'},
          'subplot': True
      },
     {'selector':
-         {'label': 'MACD(12, 26)', 'value': 'MACD'},
+         {'label': 'Moving Average Convergance', 'value': 'MACD'},
          'subplot': True
      },
     {'selector':
-         {'label': 'STOC(7)', 'value': 'STOC'},
+         {'label': 'Stochastic Indicator', 'value': 'STOC'},
          'subplot': True
      },
     {'selector':
-         {'label': 'ATR(7)', 'value': 'ATR'},
+         {'label': 'Average True Range', 'value': 'ATR'},
          'subplot': True
      },
     {'selector':
@@ -104,13 +102,13 @@ config['indicators'] = [
      },
     {
      'selector':
-         {'label': 'Williams R (15)', 'value': 'WR'},
+         {'label': 'Williams %R', 'value': 'WR'},
      'subplot': True
      },
     ]
 
 subplot_traces = [i.get('selector').get('value') for i in config.get('indicators') if i.get('subplot')]
-indicators = [i.get('selector') for i in config.get('indicators')]
+indicators = sorted([i.get('selector') for i in config.get('indicators')], key = lambda x: x['label'])
 chart_layout = {
     #'height': '100vh',
     'margin': {'b': 10, 'r': 20, 'l': 0, 't': 10},
@@ -138,49 +136,138 @@ chart_layout = {
     'legend': {'x': 1.05, 'y': 1}
     }
 def build_modal():
-    modal = []
-    for ind in indicators:
-        btn = dbc.Button(
-            f'{ind["label"]}',
-            id=f'{ind["value"]}_collapse_button',
-            className="mb-1 w-100 text-left",
-            color='dark',
-            size='sm',
-            )
-        modal.append(btn)
-        collapse = dbc.Collapse(
+    # modal = []
+    # for ind in indicators:
+    #     btn = dbc.Button(
+    #         f'{ind["label"]}',
+    #         id=f'{ind["value"]}_collapse_button',
+    #         className="mb-1 w-100 text-left",
+    #         color='dark',
+    #         size='sm',
+    #         )
+    #     modal.append(btn)
+    #     collapse = dbc.Collapse(
+    #         [
+    #             dbc.InputGroup(
+    #             [
+    #                 dbc.InputGroupAddon('Set window length (default=30)', addon_type='prepend'),
+    #                 dbc.Input(type='number', step=1, value=30, bs_size='sm', id=f'{ind["value"]}_win'),
+    #                 dbc.InputGroupAddon(
+    #                     dbc.Button('Set', id=f'set_{ind["value"]}', size='sm', className='')
+    #                 ),
+    #             ],
+    #             size='sm',
+    #             )
+    #         ],
+    #             id=f'{ind["value"]}_collapse',
+    #         )
+    #     modal.append(collapse)
+    modal_content = [
+        dbc.Row(
             [
-                dbc.InputGroup(
-                [
-                    dbc.InputGroupAddon('Set window length (default=30)', addon_type='prepend'),
-                    dbc.Input(type='number', step=1, value=30, bs_size='sm', id=f'{ind["value"]}_win'),
-                    dbc.InputGroupAddon(
-                        dbc.Button('Set', id=f'set_{ind["value"]}', size='sm', className='')
+                dbc.Col(
+                    ddt.DataTable(
+                        id='ind_table_avail',
+                        columns=[{'name': 'Available', 'id': 'avail_ind'}],
+                        data=[{'avail_ind': [ind["label"]]} for ind in indicators],
+                        style_cell={
+                            'textAlign': 'left',
+                            'padding': '5px',
+                            'padding-left': '15px',
+                            'backgroundColor': 'transparent',
+                            'color': '#FFF',
+                            'font-family': 'sans-serif',
+                            'font-size': '14px',
+                            'border': '0',
+                            'cursor': 'pointer',
+                            },
+                        style_as_list_view=True,
+                        style_header={
+                            'backgroundColor': 'transparent',
+                            'fontWeight': 'bold',
+                            'padding-left': '15px',
+                            'font-size': '14px',
+                            'color': '#FFF',
+                            'font-family': 'sans-serif',   
+                             },
                     ),
-                ],
-                size='sm',
-                )
+                    width=4,
+                    className='border-right p-0'
+                ),
+                dbc.Col(
+                    ddt.DataTable(
+                        id='ind_table_active',
+                        columns=[{'name': 'Active', 'id': 'active_ind'}, {'name': '', 'id': 'param1_name'}, {'name': '', 'id': 'param1_val', 'editable': True, 'type': 'numeric',}],
+                        data=[],
+                        row_deletable=True,
+                        style_cell={
+                            'textAlign': 'left',
+                            'padding': '5px',
+                            'padding-left': '15px',
+                            'backgroundColor': 'transparent',
+                            'color': '#FFF',
+                            'font-family':'sans-serif',
+                            'font-size': '14px',
+                            'border': '0',
+                            },
+                        style_as_list_view=True,
+                        style_header={
+                            'backgroundColor': 'transparent',
+                            'fontWeight': 'bold',
+                            'padding-left': '15px',
+                            'font-size': '14px',
+                            'color': '#FFF',
+                            'font-family': 'sans-serif',
+                            },
+                            # style_table=
+                            # {
+                            #     'height': '450px',
+                            #     'overflowY': 'scroll'
+                            # }
+                    ),
+                    width=8,
+                    className='p-0',
+                    style={'height': '450px', 'overflow-y': 'auto'},
+                    
+                ),
             ],
-                id=f'{ind["value"]}_collapse',
-            )
-        modal.append(collapse)
-    return modal
+            style={'margin-left': '0', 'margin-right': '0'},
+        )
+    ]
+    return modal_content
 
 def create_indicator_modal():
     indicator_modal = dbc.Modal(
                     [
                         dbc.ModalHeader(
-                        [
-                            'Indicators',
-                            dbc.Button(
-                                'Close',
-                                id='close_indicator_modal',
-                                className='ml-auto'
-                                )
-                        ]
+                            children=
+                                [
+                                    dbc.Row(
+                                        [
+                                            dbc.Col(
+                                                'Indicators',
+                                                className='',
+                                                width=8,
+                                            ),
+                                            dbc.Col(
+                                                dbc.Button(
+                                                    'X',
+                                                    id='close_indicator_modal',
+                                                    size='md',
+                                                    color='link',
+                                                    outline=True
+                                                ),
+                                                className='text-right',
+                                                width=4
+                                            ),
+                                        ],
+                                        className=''
+                                    )
+                                ]
                         ),
                         dbc.ModalBody(
-                            build_modal()
+                            build_modal(),
+                            style={'padding': '0'}, 
                         ),
                         #dbc.ModalFooter(
 
@@ -189,7 +276,7 @@ def create_indicator_modal():
                     id='indicator_modal',
                     size='lg',
                     centered=True,
-                    contentClassName='modal-dark',
+                    contentClassName='modal-dark shadow',
                     scrollable=True,
                     backdrop=False,
                     )
@@ -197,7 +284,8 @@ def create_indicator_modal():
 
 
 def create_submenu():
-    body = dbc.Container([
+    body = dbc.Container(
+        [
         # dbc.Row(
         #     [
         #     dbc.Col(
@@ -236,47 +324,29 @@ def create_submenu():
         [
             dbc.Nav(
             [
-                dbc.NavItem(dbc.NavLink([html.Span([html.I('settings', className='material-icons')])], href="#"), id='settings_but', className='border-right'),
+                dbc.NavItem(
+                    dbc.DropdownMenu(
+                        [
+                            dbc.DropdownMenuItem('First', id='btn_style_candles1', active=False),
+                            dbc.DropdownMenuItem('Second', id='btn_style_line1', active=False),
+                        ],
+                        nav=True,
+                        label='settings',
+                        caret=False,
+                        color='link',
+                        id='settings_but',
+                        className=''
+                        ),
+                    className='border-right pt-1'
+                    ),
                 dbc.Tooltip(
                     'Settings',
                     target='settings_but',
                     ),
-                #dbc.NavItem(dbc.NavLink([html.Span([html.I('show_chart', className='material-icons')])], href="#"), id='chart_style_but', className='border-right'),
-                dbc.Tooltip(
-                    'Select Chart Style.',
-                    target='chart_style_but',
-                    ),
-                dbc.NavItem(
-                    dbc.Button(
-                                #'trending_up',
-                        'Indicators',
-                        id='open_indicator_modal',
-                        color='link',
-                    ),
-                    className='border-right'
-                ),
-                create_indicator_modal(),
-                html.Datalist(
-                    id='list-suggested-inputs',
-                    children=[html.Option(value=word) for word in suggestions]
-                ),
-                dbc.NavItem(
-                    dbc.Input(
-                        id='stock_picker',
-                        list='list-suggested-inputs',
-                        placeholder='Search for stock',
-                        value='MMM - 3M Company',
-                        type='text',
-                        size='30',
-                        className='bg-dark border-0 text-light pl-2 pr-2 pt-1 pb-1'
-                        ),
-                #],
-                        className='border-right'
-                        ),
                 dbc.NavItem(
                     dbc.DropdownMenu(
                         [
-                            dbc.DropdownMenuItem('Candles', id='btn_style_candles', active=True),
+                            dbc.DropdownMenuItem('Candles', id='btn_style_candles', active=False),
                             dbc.DropdownMenuItem('Line', id='btn_style_line', active=False),
                         ],
                         nav=True,
@@ -287,17 +357,46 @@ def create_submenu():
                         className=''
                     ),
                     id='test',
-                    className='border-right'
+                    className='border-right pt-1'
                     ),
                 dbc.Tooltip(
                     'Select Chart Style.',
                     target='chart_style_but',
                     ),
-
-                ],
-                pills=False,
-                )
-        ]
+                dbc.NavItem(
+                    dbc.Button(
+                        'trending_up',
+                        id='open_indicator_modal',
+                        color='link',
+                        className='nav-link',
+                    ),
+                    className='border-right pt-1'
+                ),
+                dbc.Tooltip(
+                    'Indicators',
+                    target='open_indicator_modal',
+                    ),
+                create_indicator_modal(),
+                html.Datalist(
+                    id='list-suggested-inputs',
+                    children=[html.Option(value=word) for word in suggestions]
+                ),
+                dbc.NavItem(
+                    dbc.Input(
+                        id='0stock_picker',
+                        list='list-suggested-inputs',
+                        placeholder='Search for stock',
+                        value='MMM - 3M Company',
+                        type='text',
+                        size='30',
+                        className='bg-dark border-0 text-light pl-2 pr-2 pt-1 pb-1'
+                        ),
+                    className='border-right pt-1 mt-auto mb-auto'
+                ),
+            ],
+            pills=False,
+        )
+    ]
         )],
         className='border-bottom submenu',
         fluid=True,
@@ -353,6 +452,7 @@ layout = html.Div([
         style={'display': 'none'}
         ),
     html.Div(
+        'ohlc',
         id='chart_style_div',
         style={'display': 'none'}
     ),
@@ -481,7 +581,6 @@ def get_fig(ticker, type_trace, studies, start_date, end_date):
 #         return 'ohlc'
 #     if n2:
 #         return 'd_close'
-
 @app.callback(
     [
         Output('chart_style_div', 'children'),
@@ -495,17 +594,17 @@ def get_fig(ticker, type_trace, studies, start_date, end_date):
 )
 def toggle_buttons(candles, line):
     ctx = dash.callback_context
-    if not ctx.triggered:
-        raise PreventUpdate
-    else:
-        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    if not any([candles, line,]):
-        return 'ohlc', False, False
+    # if not ctx.triggered:
+    #     raise PreventUpdate
+    # else:
+    print(candles, line, '\n\n\n')
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    if not any([candles, line]):
+        return 'ohlc', True, False
     elif button_id == 'btn_style_candles':
         return 'ohlc', True, False
     elif button_id == 'btn_style_line':
         return 'd_close', False, True
-
 
 @app.callback(
         Output('0chart', 'figure'),
@@ -520,8 +619,10 @@ def toggle_buttons(candles, line):
         State('0chart', 'figure'),
     ]
     )
-def chart_fig_callback(ticker_list, trace_type, studies, timeRange,
+def chart_fig_callback(
+    ticker_list, trace_type, studies, timeRange,
                            oldFig):
+    print(ticker_list, trace_type, '\n\n\n')
     start_date, end_date = to.axisRangeToDate(timeRange)
     ticker_list = ticker_list.split('-')[0].strip()
     if oldFig is None or oldFig == {'layout': {}, 'data': {}}:
@@ -616,24 +717,25 @@ def toggle_modal(n1, n2, is_open):
         return not is_open
     return is_open
 
-@app.callback(
-        Output('selected_study_div', 'children'),
-    [
-        Input(f'set_{ind["value"]}', 'n_clicks') for ind in indicators
-    ],
-    [
-        State('selected_study_div', 'children'),
-        State('EMA10_win', 'value'),
-    ],
-)
-def set_indicators(n_clicks, selected_studies, *args):
-    ctx = dash.callback_context
-    if not ctx.triggered:
-        raise PreventUpdate
-    else:
-        button_id = ctx.triggered[0]['prop_id'].split('.')[0]
-    selected_studies[button_id] = args
-    return selected_studies
+# @app.callback(
+#         Output('selected_study_div', 'children'),
+#     [
+#         Input(f'{ind["value"]}_win', 'value') for ind in indicators
+#     ],
+#     [
+#         State('selected_study_div', 'children'),
+#         State('EMA10_win', 'value'),
+#     ],
+# )
+# def set_indicators(n_clicks, *kwargs):
+#     print(kwargs)
+    # ctx = dash.callback_context
+    # if not ctx.triggered:
+    #     raise PreventUpdate
+    # else:
+    #     button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+    # selected_studies[button_id] = args
+    # return selected_studies
 
 # def toggle_collapse(n, is_open):
 #     if n:
@@ -647,7 +749,17 @@ def set_indicators(n_clicks, selected_studies, *args):
 #     )(toggle_collapse)
 
 
-from dash.dependencies import ClientsideFunction
+@app.callback(
+    [
+        Output(f'{ind["value"]}_collapse_button', 'active') for ind in indicators
+    ],
+    [
+        Input('selected_study_div', 'children'),
+    ]
+)
+def set_button_active(selected_studies):
+    print(selected_studies)
+    return ([ind["value"]in selected_studies.keys() for ind in indicators])
 
 for ind in indicators:
     app.clientside_callback(
@@ -655,7 +767,30 @@ for ind in indicators:
             namespace='clientside',
             function_name='toggle_collapse'
         ),
-        Output(f'{ind["value"]}_collapse', 'is_open'),
-        [Input(f'{ind["value"]}_collapse_button', 'n_clicks')],
-        [State(f'{ind["value"]}_collapse', 'is_open')]
+            Output(f'{ind["value"]}_collapse', 'is_open'),
+        [
+            Input(f'{ind["value"]}_collapse_button', 'n_clicks')
+        ],
+        [
+            State(f'{ind["value"]}_collapse', 'is_open')
+        ]
     )
+
+
+@app.callback(  
+        Output('ind_table_active', 'data'),
+    [
+        Input('ind_table_avail', 'active_cell')
+    ],
+    [
+        State('ind_table_active', 'data'),
+    ]
+)
+def get_active_cell_value (active_cell, active_ind):
+    if active_cell:
+        active_ind.append({'active_ind': indicators[active_cell['row']].get('label'), 'param1_name': 'Window:','param1_val': '20'})
+        return active_ind
+    else:
+        return []
+    
+    

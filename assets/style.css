@@ -8,7 +8,9 @@ html {
     #color: #6b778c;
     color: rgb(219, 240, 238)
     }
-
+* {
+    -webkit-font-smoothing: antialiased;
+}
 a.nav-link {
     color: rgb(219, 240, 238);
 }
@@ -79,8 +81,9 @@ p {
 .submenu {
     /*background-color: rgb(64, 68, 72);*/
     background-color: #131722;
+    margin-top: 1px;
 }
-#chart_style_but a.nav-link {
+.submenu a.nav-link, .submenu button {
   /*content: "show_chart";*/
   color: rgb(219, 240, 238);
   font-family: 'Material Icons';
@@ -323,4 +326,28 @@ p {
   font-weight: normal;
   font-style: normal;
   font-size: 24px !important;
+}
+
+.dash-spreadsheet-container table {
+    --accent: transparent !important;
+    --selected-background: #6c757d !important;
+    --selected-color: #3C3C3C !important;
+    --hover: #3C3C3C !important;
+}
+
+::-webkit-scrollbar {
+    -webkit-appearance: none;
+
+}::-webkit-scrollbar:vertical {
+    width: 5px;
+}
+
+::-webkit-scrollbar:horizontal {
+    height: 0;
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: 8px;
+    border: 0px solid white; /* should match background, can't be transparent */
+    background-color: rgba(0, 0, 0, .5);
 }

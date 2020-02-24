@@ -31,21 +31,21 @@ def search_list():
 suggestions = search_list()
 search_bar = dbc.Row(
     [
-        html.Datalist(
-            id='list-suggested-inputs',
-            children=[html.Option(value=word) for word in suggestions]),
-        dbc.Col(
-            dbc.Input(
-                id='0stock_picker',
-                list='list-suggested-inputs',
-                placeholder='Search for stock',
-                value='MMM - 3M Company',
-                type='text',
-                size='50',
-                className='bg-dark border-light text-light w-100 rounded br-3 pl-2 pr-2 pt-1 pb-1'
-                ),
-            className='border-light'
-            ),
+        # html.Datalist(
+        #     id='list-suggested-inputs',
+        #     children=[html.Option(value=word) for word in suggestions]),
+        # dbc.Col(
+        #     dbc.Input(
+        #         id='0stock_picker',
+        #         list='list-suggested-inputs',
+        #         placeholder='Search for stock',
+        #         value='MMM - 3M Company',
+        #         type='text',
+        #         size='50',
+        #         className='bg-dark border-light text-light w-100 rounded br-3 pl-2 pr-2 pt-1 pb-1'
+        #         ),
+        #     className='border-light'
+        #     ),
     ],
     no_gutters=True,
     className="ml-auto flex-nowrap mt-3 mt-md-0",
